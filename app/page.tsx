@@ -1282,7 +1282,7 @@ export default function Home() {
 								<div
 									className={`${magazine.className} border-2 shadow-lg gap-8 relative rounded-[10px] px-5 min-w-[600px]  flex flex-col items-center justify-center py-6  bg-linear-to-r from-yellow-100 via-yellow-200 to-yellow-400`}
 								>
-									<div className="">
+									<div className="wrap-break-word">
 										<p
 											className={`text-2xl tracking-widest text-yellow-700 font-extralight px-5`}
 										>
@@ -1420,9 +1420,9 @@ export default function Home() {
 								// Prevent closing via Escape (match original behavior)
 								if (e.key === "Escape") e.preventDefault();
 							}}
-							className={`${magazine.className} border-2 shadow-lg gap-8 relative rounded-[10px] z-50 px-5 min-w-[600px] flex flex-col items-center justify-center py-6 bg-linear-to-r from-yellow-100 via-yellow-200 to-yellow-400`}
+							className={`${magazine.className} border-2 shadow-lg gap-8 relative rounded-[10px] max-w-[95%] z-50 px-5 md:min-w-[600px] flex flex-col items-center justify-center py-6 bg-linear-to-r from-yellow-100 via-yellow-200 to-yellow-400`}
 						>
-							<div className="">
+							<div className="wrap-break-word">
 								<p
 									className={`text-2xl tracking-widest text-yellow-700 font-extralight px-5`}
 								>
