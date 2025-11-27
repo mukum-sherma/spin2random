@@ -1,65 +1,1076 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { Textarea } from "@/components/ui/textarea";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import { Maximize2, Minimize2, Pencil, Check, X } from "lucide-react";
+import Navbar from "./_components/navbar";
+import localFont from "next/font/local";
+
+import { Lexend_Deca } from "next/font/google";
+import { Button } from "@/components/ui/button";
+const lexendDeca = Lexend_Deca({
+	subsets: ["latin"],
+	weight: ["400", "700"],
+});
+
+const masque = localFont({
+	src: "./_fonts/masque.ttf",
+	variable: "--font-masque",
+});
+
+const magazine = localFont({
+	src: "./_fonts/magazine.ttf",
+	variable: "--font-magazine",
+});
+
+type NameOrder = "shuffle" | "ascending" | "descending";
+type BackgroundChange =
+	| { type: "color"; value: string }
+	| { type: "image"; value: string }
+	| { type: "reset" };
 
 export default function Home() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+	const [names, setNames] = useState("Alice\nBob\nCharlie\nDiana\nEve");
+	const [spinning, setSpinning] = useState(false);
+	const [rotation, setRotation] = useState(0);
+	const [winner, setWinner] = useState<string | null>(null);
+	const [showDialog, setShowDialog] = useState(false);
+	const [nameOrder, setNameOrder] = useState<NameOrder>("shuffle");
+	const [timerDuration, setTimerDuration] = useState(6);
+	const [backgroundSelection, setBackgroundSelection] =
+		useState<BackgroundChange | null>(null);
+	const [winningSound, setWinningSound] = useState("small-group-applause");
+	const [spinSound, setSpinSound] = useState("single-spin");
+	const [isFullscreen, setIsFullscreen] = useState(false);
+	const [wheelTitle, setWheelTitle] = useState("Wheel of Names");
+	const [isEditingTitle, setIsEditingTitle] = useState(false);
+	const [tempTitle, setTempTitle] = useState("Wheel of Names");
+	const canvasRef = useRef<HTMLCanvasElement>(null);
+	const wheelSectionRef = useRef<HTMLDivElement>(null);
+	const audioBufferRef = useRef<AudioBuffer | null>(null);
+	const audioContextRef = useRef<AudioContext | null>(null);
+	const lastSegmentRef = useRef<number>(-1);
+	const drumBufferRef = useRef<AudioBuffer | null>(null);
+	const winningBuffersRef = useRef<Map<string, AudioBuffer>>(new Map());
+	const spinBuffersRef = useRef<Map<string, AudioBuffer>>(new Map());
+
+	// Initialize Web Audio API for better performance on mobile
+	useEffect(() => {
+		const initAudio = async () => {
+			try {
+				type ExtendedWindow = typeof window & {
+					webkitAudioContext?: typeof AudioContext;
+				};
+				const audioConstructor =
+					window.AudioContext || (window as ExtendedWindow).webkitAudioContext;
+				if (!audioConstructor) return;
+				const audioContext = new audioConstructor();
+				audioContextRef.current = audioContext;
+
+				// Fetch and decode drum roll
+				console.log("📥 Loading drum roll...");
+				const drumResponse = await fetch("/sounds/drum/drum-roll.mp3");
+				const drumArrayBuffer = await drumResponse.arrayBuffer();
+				const drumBuffer = await audioContext.decodeAudioData(drumArrayBuffer);
+				drumBufferRef.current = drumBuffer;
+				console.log("✅ Drum roll loaded");
+
+				// Preload all winning sounds
+				console.log("📥 Loading winning sounds...");
+				const winningFiles = [
+					"cheering-crowd-whistle",
+					"fanfare-announcement",
+					"huge-crowd-cheering",
+					"moderate-applause",
+					"small-group-applause",
+					"video-game-win",
+					"win-alarm",
+					"yes-victory",
+				];
+
+				const bufferMap = new Map<string, AudioBuffer>();
+				await Promise.all(
+					winningFiles.map(async (fileName) => {
+						try {
+							const response = await fetch(`/sounds/winning/${fileName}.wav`);
+							const arrayBuffer = await response.arrayBuffer();
+							const buffer = await audioContext.decodeAudioData(arrayBuffer);
+							bufferMap.set(fileName, buffer);
+						} catch (err) {
+							console.warn(`Failed to load ${fileName}:`, err);
+						}
+					})
+				);
+				winningBuffersRef.current = bufferMap;
+
+				// Preload all spin sounds
+				console.log("📥 Loading spin sounds...");
+				const spinSoundFiles = [
+					"alarm-beep-2mp3",
+					"alarm-clock-beep",
+					"bell-signal",
+					"chime-bell-ring",
+					"clock-close-up",
+					"clock-gong",
+					"clock-mix-tick",
+					"clock-strikemp3",
+					"electric-tickmp3",
+					"pendulum-tick",
+					"percussion-tock",
+					"racing-countdown",
+					"single-spin",
+					"slow-racing-countdown",
+					"ticker-single",
+					"ticking-counter",
+					"ticking-timer",
+					"tick-tock-bell-beep",
+					"tick-tock-bell",
+					"wall-clock-tick",
+					"wall-clock-tock",
+				];
+
+				const spinBufferMap = new Map<string, AudioBuffer>();
+				await Promise.all(
+					spinSoundFiles.map(async (fileName) => {
+						try {
+							const response = await fetch(`/sounds/spin/${fileName}.mp3`);
+							const arrayBuffer = await response.arrayBuffer();
+							const buffer = await audioContext.decodeAudioData(arrayBuffer);
+							spinBufferMap.set(fileName, buffer);
+						} catch (err) {
+							console.warn(`Failed to load spin sound ${fileName}:`, err);
+						}
+					})
+				);
+				spinBuffersRef.current = spinBufferMap;
+				console.log(
+					"✅ Loaded",
+					spinBufferMap.size,
+					"spin sounds:",
+					Array.from(spinBufferMap.keys())
+				);
+
+				// Set initial spin sound (default: single-spin)
+				const defaultSpinBuffer = spinBufferMap.get("single-spin");
+				if (defaultSpinBuffer) {
+					audioBufferRef.current = defaultSpinBuffer;
+					console.log("🔊 Initial wheel spin sound set to: single-spin");
+				} else {
+					console.error("❌ Failed to load default spin sound: single-spin");
+				}
+			} catch (error) {
+				console.error("Audio initialization failed:", error);
+			}
+		};
+
+		initAudio();
+
+		return () => {
+			if (audioContextRef.current) {
+				audioContextRef.current.close();
+			}
+		};
+	}, []);
+
+	// Update wheel spin sound when selection changes
+	useEffect(() => {
+		if (spinBuffersRef.current && spinSound) {
+			const buffer = spinBuffersRef.current.get(spinSound);
+			if (buffer) {
+				audioBufferRef.current = buffer;
+				console.log("🔊 Wheel spin sound updated to:", spinSound);
+			}
+		}
+	}, [spinSound]);
+
+	// Play drum roll and winning audio when winner dialog opens
+	useEffect(() => {
+		if (showDialog && audioContextRef.current) {
+			const audioContext = audioContextRef.current;
+
+			console.log(
+				"🎵 Winner dialog opened, audio context state:",
+				audioContext.state
+			);
+			console.log("🥁 Drum buffer loaded:", !!drumBufferRef.current);
+			console.log("🏆 Winning sound:", winningSound);
+			console.log(
+				"📦 Winning buffer loaded:",
+				!!winningBuffersRef.current.get(winningSound)
+			);
+			console.log(
+				"📋 Available winning sounds:",
+				Array.from(winningBuffersRef.current.keys())
+			);
+
+			// Resume AudioContext if suspended (required on mobile)
+			if (audioContext.state === "suspended") {
+				console.log("⏯️ Resuming suspended audio context...");
+				audioContext.resume().then(() => {
+					console.log("✅ Audio context resumed, state:", audioContext.state);
+				});
+			}
+
+			try {
+				// Play drum roll using Web Audio API
+				if (drumBufferRef.current) {
+					console.log("🎵 Playing drum roll...");
+					const drumSource = audioContext.createBufferSource();
+					drumSource.buffer = drumBufferRef.current;
+					const drumGain = audioContext.createGain();
+					drumGain.gain.value = 0.8;
+					drumSource.connect(drumGain);
+					drumGain.connect(audioContext.destination);
+					drumSource.start(0);
+					console.log("✅ Drum roll started");
+				} else {
+					console.warn("❌ Drum buffer not loaded");
+				}
+
+				// Play selected winning sound using Web Audio API
+				const winningBuffer = winningBuffersRef.current.get(winningSound);
+				if (winningBuffer) {
+					console.log("🎵 Playing winning sound:", winningSound);
+					const winSource = audioContext.createBufferSource();
+					winSource.buffer = winningBuffer;
+					const winGain = audioContext.createGain();
+					winGain.gain.value = 0.9;
+					winSource.connect(winGain);
+					winGain.connect(audioContext.destination);
+					winSource.start(0);
+					console.log("✅ Winning sound started");
+				} else {
+					console.warn("❌ Winning buffer not found for:", winningSound);
+				}
+			} catch (e) {
+				console.error("❌ Failed to play winner audio", e);
+			}
+		}
+	}, [showDialog, winningSound]);
+	const reorderNames = useCallback((order: NameOrder, source: string) => {
+		const parsed = source
+			.split("\n")
+			.map((name) => name.trim())
+			.filter((name) => name !== "");
+
+		if (parsed.length === 0) return "";
+
+		const arranged = [...parsed];
+		switch (order) {
+			case "ascending":
+				arranged.sort((a, b) => a.localeCompare(b));
+				break;
+			case "descending":
+				arranged.sort((a, b) => b.localeCompare(a));
+				break;
+			case "shuffle":
+			default:
+				for (let i = arranged.length - 1; i > 0; i -= 1) {
+					const j = Math.floor(Math.random() * (i + 1));
+					[arranged[i], arranged[j]] = [arranged[j], arranged[i]];
+				}
+		}
+
+		return arranged.join("\n");
+	}, []);
+
+	const handleNamesOrderChange = useCallback(
+		(order: NameOrder) => {
+			setNameOrder(order);
+			setNames((prev) => reorderNames(order, prev));
+		},
+		[reorderNames]
+	);
+
+	const handleTimerChange = useCallback((seconds: number) => {
+		setTimerDuration(seconds);
+	}, []);
+
+	const handleBackgroundChange = useCallback((change: BackgroundChange) => {
+		setBackgroundSelection(change);
+	}, []);
+
+	const toggleFullscreen = useCallback(async () => {
+		if (!wheelSectionRef.current) return;
+
+		try {
+			if (!document.fullscreenElement) {
+				await wheelSectionRef.current.requestFullscreen();
+				setIsFullscreen(true);
+			} else {
+				await document.exitFullscreen();
+				setIsFullscreen(false);
+			}
+		} catch (err) {
+			console.error("Fullscreen error:", err);
+		}
+	}, []);
+
+	const startEditingTitle = useCallback(() => {
+		setTempTitle(wheelTitle);
+		setIsEditingTitle(true);
+	}, [wheelTitle]);
+
+	const saveTitle = useCallback(() => {
+		if (tempTitle.trim()) {
+			setWheelTitle(tempTitle.trim());
+		}
+		setIsEditingTitle(false);
+	}, [tempTitle]);
+
+	const cancelEditTitle = useCallback(() => {
+		setTempTitle(wheelTitle);
+		setIsEditingTitle(false);
+	}, [wheelTitle]);
+
+	// Listen for fullscreen changes
+	useEffect(() => {
+		const handleFullscreenChange = () => {
+			const isFS = !!document.fullscreenElement;
+			setIsFullscreen(isFS);
+
+			// Add/remove class to body for dialog styling
+			if (isFS) {
+				document.body.classList.add("fullscreen-active");
+			} else {
+				document.body.classList.remove("fullscreen-active");
+			}
+		};
+
+		document.addEventListener("fullscreenchange", handleFullscreenChange);
+		return () => {
+			document.removeEventListener("fullscreenchange", handleFullscreenChange);
+			document.body.classList.remove("fullscreen-active");
+		};
+	}, []);
+
+	useEffect(() => {
+		if (backgroundSelection?.type === "color") {
+			document.body.style.background = backgroundSelection.value;
+			document.body.style.backgroundImage = "";
+			document.body.style.backgroundSize = "";
+			document.body.style.backgroundPosition = "";
+			document.body.style.backgroundRepeat = "";
+		} else if (backgroundSelection?.type === "image") {
+			document.body.style.background = "";
+			document.body.style.backgroundImage = `url(${backgroundSelection.value})`;
+			document.body.style.backgroundSize = "cover";
+			document.body.style.backgroundPosition = "center";
+			document.body.style.backgroundRepeat = "no-repeat";
+		} else {
+			document.body.style.background = "";
+			document.body.style.backgroundImage = "";
+			document.body.style.backgroundSize = "";
+			document.body.style.backgroundPosition = "";
+			document.body.style.backgroundRepeat = "";
+		}
+	}, [backgroundSelection]);
+
+	useEffect(() => {
+		return () => {
+			document.body.style.background = "";
+			document.body.style.backgroundImage = "";
+			document.body.style.backgroundSize = "";
+			document.body.style.backgroundPosition = "";
+			document.body.style.backgroundRepeat = "";
+		};
+	}, []);
+	const namesList = useMemo(
+		() =>
+			names
+				.split("\n")
+				.filter((name) => name.trim() !== "")
+				.map((name) => name.trim()),
+		[names]
+	);
+
+	const colors = useMemo(
+		() => [
+			"#FF6B6B",
+			"#4ECDC4",
+			"#45B7D1",
+			"#FFA07A",
+			"#98D8C8",
+			"#F7DC6F",
+			"#BB8FCE",
+			"#85C1E2",
+			"#F8B88B",
+			"#ABEBC6",
+		],
+		[]
+	);
+
+	const drawWheel = useCallback(() => {
+		const canvas = canvasRef.current;
+		// if (!canvas || namesList.length === 0) return;
+		// Use placeholder segments if no names entered
+		const displayList =
+			namesList.length > 0
+				? namesList
+				: ["Add", "Names", "Here", "To", "Start", "Spinning"];
+		if (!canvas) return;
+
+		const ctx = canvas.getContext("2d", {
+			alpha: true,
+			desynchronized: true, // Improve performance on mobile
+		});
+		if (!ctx) return;
+
+		const centerX = canvas.width / 2;
+		const centerY = canvas.height / 2;
+		const radius = Math.min(centerX, centerY) - 7; // reduced padd3000ing for larger wheel from the edges
+
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+		// Scale factor for center elements: 1.7x (70% increase) on md+ screens (768px+)
+		const centerScale = canvas.width >= 768 ? 1.7 : 1;
+
+		// Draw wheel segments
+		// const anglePerSegment = (2 * Math.PI) / namesList.length;
+		const anglePerSegment = (2 * Math.PI) / displayList.length;
+
+		// namesList.forEach((name, index) => {
+		displayList.forEach((name, index) => {
+			const startAngle = index * anglePerSegment + (rotation * Math.PI) / 180;
+			const endAngle = startAngle + anglePerSegment;
+
+			// Draw segment
+			ctx.beginPath();
+			ctx.moveTo(centerX, centerY);
+			ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+			ctx.closePath();
+			ctx.fillStyle = colors[index % colors.length];
+			ctx.fill();
+			ctx.strokeStyle = "#fff";
+			ctx.lineWidth = 3;
+			ctx.stroke();
+
+			// Draw text with dynamic font size based on partition size and text length
+			ctx.save();
+			ctx.translate(centerX, centerY);
+			ctx.rotate(startAngle + anglePerSegment / 2);
+			ctx.textAlign = "center";
+			// ctx.fillStyle = "#000";
+			ctx.fillStyle = namesList.length === 0 ? "rgba(0, 0, 0, 0.4)" : "#000";
+
+			// Calculate base font size based on canvas size (responsive)
+			const baseFontSize = Math.max(12, Math.round(radius / 20));
+
+			// Scale by partition size with boost for many names (8+)
+			const angleDegrees = (anglePerSegment * 180) / Math.PI;
+			// const minScale = namesList.length >= 8 ? 1.8 : 0.9;
+			const minScale = displayList.length >= 8 ? 1.8 : 0.9;
+			const partitionScale = Math.min(
+				2.5,
+				Math.max(minScale, angleDegrees / 30)
+			);
+			let fontSize = Math.round(baseFontSize * partitionScale);
+			ctx.font = `bold ${fontSize}px Arial`;
+
+			// Available text width (from center to near edge, accounting for padding)
+			const maxTextWidth = radius * 0.55; // Max width before edge
+			let textWidth = ctx.measureText(name).width;
+
+			// If text is too wide, reduce font size proportionally
+			if (textWidth > maxTextWidth) {
+				const textLengthScale = maxTextWidth / textWidth;
+				fontSize = Math.round(fontSize * textLengthScale);
+				fontSize = Math.max(8, fontSize); // Minimum 8px
+				ctx.font = `bold ${fontSize}px Arial`;
+				textWidth = ctx.measureText(name).width;
+			}
+
+			// If still too wide after scaling, truncate with "..."
+			let displayText = name;
+			if (textWidth > maxTextWidth) {
+				while (
+					displayText.length > 1 &&
+					ctx.measureText(displayText + "...").width > maxTextWidth
+				) {
+					displayText = displayText.slice(0, -1);
+				}
+				displayText += "...";
+			}
+
+			ctx.fillText(displayText, radius * 0.65, fontSize * 0.3);
+			ctx.restore();
+		});
+
+		// Add 3D gradient effect to wheel edges
+		const gradient = ctx.createRadialGradient(
+			centerX,
+			centerY,
+			radius * 0.5,
+			centerX,
+			centerY,
+			radius
+		);
+		gradient.addColorStop(0, "rgba(255, 255, 255, 0)");
+		gradient.addColorStop(0.85, "rgba(255, 255, 255, 0)");
+		gradient.addColorStop(0.95, "rgba(0, 0, 0, 0.08)");
+		gradient.addColorStop(1, "rgba(0, 0, 0, 0.16)");
+
+		ctx.beginPath();
+		ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+		ctx.fillStyle = gradient;
+		ctx.fill();
+
+		// Draw arrow at center with subtle dark shadow and white highlight for 3D depth
+		// Triangle arrow shape matching the PNG
+		ctx.save();
+		ctx.translate(centerX + 20.5 * centerScale, centerY);
+		ctx.scale(centerScale, centerScale); // Position moved right by half width
+
+		// Draw a subtle dark soft shadow behind the arrow
+		ctx.save();
+		ctx.fillStyle = "rgba(0,0,0,0.08)";
+		ctx.shadowColor = "rgba(0,0,0,0.16)";
+		ctx.shadowBlur = 10;
+		ctx.beginPath();
+		ctx.moveTo(50, 0);
+		ctx.lineTo(-25, -40);
+		ctx.lineTo(-25, 40);
+		ctx.closePath();
+		ctx.fill();
+		ctx.restore();
+
+		// Main arrow with a small white highlight (existing look)
+		ctx.shadowColor = "rgba(255, 255, 255, 0.9)";
+		ctx.shadowBlur = 12;
+		ctx.shadowOffsetX = 0;
+		ctx.shadowOffsetY = 0;
+		ctx.fillStyle = "#000000";
+		ctx.beginPath();
+		ctx.moveTo(50, 0); // tip pointing right
+		ctx.lineTo(-25, -40); // top left corner
+		ctx.lineTo(-25, 40); // bottom left corner
+		ctx.closePath();
+		ctx.fill();
+
+		// Add white highlight edge for more 3D depth
+		ctx.shadowColor = "transparent";
+		ctx.shadowBlur = 0;
+		ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+		ctx.lineWidth = 2;
+		ctx.beginPath();
+		ctx.moveTo(50, 0);
+		ctx.lineTo(-25, -40);
+		ctx.stroke();
+
+		ctx.restore();
+
+		// Draw center circle with 3D radial gradient button effect
+		ctx.beginPath();
+		const circleRadius = 45 * centerScale;
+		ctx.arc(centerX, centerY, circleRadius, 0, 2 * Math.PI);
+
+		// Create 3D radial gradient for button effect
+		const buttonGrad = ctx.createRadialGradient(
+			centerX - 10 * centerScale,
+			centerY - 10 * centerScale,
+			0,
+			centerX,
+			centerY,
+			circleRadius
+		);
+
+		if (spinning) {
+			// Pressed state - darker, inverted gradient
+			buttonGrad.addColorStop(0, "#000000");
+			buttonGrad.addColorStop(0.6, "#1a1a1a");
+			buttonGrad.addColorStop(1, "#0d0d0d");
+		} else {
+			// Normal state - 3D raised button effect
+			buttonGrad.addColorStop(0, "#2a2a2a");
+			buttonGrad.addColorStop(0.5, "#1a1a1a");
+			buttonGrad.addColorStop(1, "#000000");
+		}
+
+		ctx.fillStyle = buttonGrad;
+		ctx.fill();
+
+		// White border
+		ctx.strokeStyle = "#FFFFFF";
+		ctx.lineWidth = 3 * centerScale;
+		ctx.stroke();
+
+		// Add subtle inner shadow for pressed effect
+		if (spinning) {
+			const innerShadow = ctx.createRadialGradient(
+				centerX,
+				centerY,
+				0,
+				centerX,
+				centerY,
+				circleRadius - 3
+			);
+			innerShadow.addColorStop(0, "rgba(0,0,0,0)");
+			innerShadow.addColorStop(0.8, "rgba(0,0,0,0)");
+			innerShadow.addColorStop(1, "rgba(0,0,0,0.5)");
+			ctx.beginPath();
+			ctx.arc(centerX, centerY, circleRadius - 3, 0, 2 * Math.PI);
+			ctx.fillStyle = innerShadow;
+			ctx.fill();
+		} else {
+			// Add highlight for 3D effect when not pressed
+			const highlight = ctx.createRadialGradient(
+				centerX - 15 * centerScale,
+				centerY - 15 * centerScale,
+				0,
+				centerX,
+				centerY,
+				circleRadius * 0.6
+			);
+			highlight.addColorStop(0, "rgba(255,255,255,0.15)");
+			highlight.addColorStop(1, "rgba(255,255,255,0)");
+			ctx.beginPath();
+			ctx.arc(centerX, centerY, circleRadius - 3, 0, 2 * Math.PI);
+			ctx.fillStyle = highlight;
+			ctx.fill();
+		}
+
+		// Add "Spin" text in center
+		ctx.fillStyle = spinning ? "#CCCCCC" : "#FFFFFF";
+		ctx.font = `bold ${20 * centerScale}px masque`;
+		ctx.textAlign = "center";
+		ctx.textBaseline = "middle";
+
+		// Slight text offset when pressed
+		const textOffsetY = spinning ? 2 * centerScale : 0;
+		ctx.fillText("SPIN", centerX, centerY + textOffsetY);
+	}, [namesList, rotation, colors, spinning]);
+
+	useEffect(() => {
+		drawWheel();
+	}, [drawWheel]);
+
+	const determineWinner = useCallback(
+		(finalRotation: number) => {
+			if (namesList.length === 0) return;
+
+			const anglePerSegment = 360 / namesList.length;
+
+			// The arrow points to the right (0 degrees / 360 degrees)
+			// We need to find which segment is at the right after rotation
+			const adjustedRotation = (360 - (finalRotation % 360)) % 360;
+			const winnerIndex =
+				Math.floor(adjustedRotation / anglePerSegment) % namesList.length;
+
+			setWinner(namesList[winnerIndex]);
+			setShowDialog(true);
+		},
+		[namesList]
+	);
+
+	const spinWheel = useCallback(() => {
+		if (spinning || namesList.length === 0) return;
+
+		setSpinning(true);
+
+		const duration = Math.max(500, timerDuration * 1000);
+
+		// Random final rotation (multiple full spins + random position)
+		const spins = 5 + Math.floor(Math.random() * 5); // 5-10 full spins
+		const randomDegree = Math.random() * 360;
+		const totalRotation = spins * 360 + randomDegree;
+
+		const startTime = Date.now();
+		const startRotation = rotation;
+
+		const animate = () => {
+			const elapsed = Date.now() - startTime;
+
+			let currentRotation;
+			// Fixed 3 seconds for acceleration and deceleration (same as 6-second timer for ALL durations)
+			const accelDuration = 3000; // First 3 seconds
+			const decelDuration = 3000; // Last 3 seconds
+			const constantSpeedDuration = duration - accelDuration - decelDuration;
+
+			// Calculate rotation amounts based on 6-second timer reference
+			// For 6 seconds: totalRotation is split 50% during acceleration, 50% during deceleration
+			// For longer timers: use SAME acceleration/deceleration rotation amounts, add extra in middle
+
+			// Acceleration: 0 to peak speed over 3 seconds (same for all timers)
+			const rotationDuringAccel = totalRotation * 0.5;
+
+			// Deceleration: peak speed to 0 over 3 seconds (same for all timers)
+			const rotationDuringDecel = totalRotation * 0.5;
+
+			// Constant speed: only for timers > 6 seconds, using peak speed from 6-second timer
+			// Peak speed reached at end of acceleration = rotationDuringAccel / (accelDuration / 2)
+			const peakSpeedPerMs = rotationDuringAccel / (accelDuration / 2);
+			const rotationDuringConstant = peakSpeedPerMs * constantSpeedDuration;
+
+			// Phase 1: Acceleration (0 to peak speed) - SAME for all timers
+			if (elapsed < accelDuration) {
+				const t = elapsed / accelDuration;
+				const easeProgress = t * t; // Quadratic ease-in (starts slow, speeds up)
+				currentRotation = startRotation + rotationDuringAccel * easeProgress;
+			}
+			// Phase 2: Constant speed (peak speed maintained) - ONLY for timers > 6 seconds
+			else if (
+				constantSpeedDuration > 0 &&
+				elapsed < accelDuration + constantSpeedDuration
+			) {
+				const constantElapsed = elapsed - accelDuration;
+				currentRotation =
+					startRotation +
+					rotationDuringAccel +
+					peakSpeedPerMs * constantElapsed;
+			}
+			// Phase 3: Deceleration (peak speed to 0) - SAME for all timers
+			else if (elapsed < duration) {
+				const decelElapsed = elapsed - accelDuration - constantSpeedDuration;
+				const t = decelElapsed / decelDuration;
+				const easeProgress = 1 - Math.pow(1 - t, 3); // Cubic ease-out (slows down gradually)
+				const rotationBeforeDecel =
+					rotationDuringAccel + rotationDuringConstant;
+				currentRotation =
+					startRotation +
+					rotationBeforeDecel +
+					rotationDuringDecel * easeProgress;
+			} else {
+				// Animation complete - set final position
+				currentRotation = startRotation + totalRotation;
+			}
+
+			setRotation(currentRotation % 360);
+
+			// Detect segment change and play sound
+			const anglePerSegment = 360 / namesList.length;
+			const adjustedRotation = (360 - (currentRotation % 360)) % 360;
+			const currentSegment =
+				Math.floor(adjustedRotation / anglePerSegment) % namesList.length;
+
+			if (currentSegment !== lastSegmentRef.current) {
+				lastSegmentRef.current = currentSegment;
+				// Play tick sound using Web Audio API (non-blocking)
+				const audioBuffer = audioBufferRef.current;
+				const audioContext = audioContextRef.current;
+				if (audioBuffer && audioContext) {
+					// Create a new source node for each tick (they're one-time use)
+					const source = audioContext.createBufferSource();
+					source.buffer = audioBuffer;
+					source.connect(audioContext.destination);
+					source.start(0);
+				}
+			}
+			if (elapsed < duration) {
+				requestAnimationFrame(animate);
+			} else {
+				setSpinning(false);
+				lastSegmentRef.current = -1; // Reset for next spin
+				determineWinner(currentRotation % 360);
+			}
+		};
+
+		animate();
+	}, [spinning, namesList.length, rotation, determineWinner, timerDuration]);
+
+	// Set canvas size to container width (fill parent)
+	useEffect(() => {
+		const canvas = canvasRef.current;
+		if (!canvas) return;
+
+		const resizeCanvas = () => {
+			const container = canvas.parentElement as HTMLElement | null;
+			if (!container) return;
+
+			const size = container.clientWidth; // full width of parent
+			canvas.width = size;
+			canvas.height = size; // keep square
+			canvas.style.width = "100%";
+			canvas.style.height = "auto";
+			drawWheel();
+		};
+
+		resizeCanvas();
+		window.addEventListener("resize", resizeCanvas);
+		return () => window.removeEventListener("resize", resizeCanvas);
+	}, [drawWheel]);
+
+	return (
+		<div className="min-h-screen">
+			<style jsx>{`
+				@media (min-width: 768px) {
+					#wheel:fullscreen {
+						display: flex;
+						flex-direction: column;
+						justify-content: center;
+						align-items: center;
+						width: 85vmin !important;
+						height: 100vh;
+						margin: 0 auto;
+						background: inherit;
+						padding: 2rem;
+					}
+					#wheel:fullscreen > * {
+						max-width: 100%;
+					}
+					#wheel:fullscreen .wheel-canvas-container {
+						width: 100% !important;
+						max-width: 85vmin;
+						flex-shrink: 0;
+					}
+					#wheel:fullscreen canvas {
+						max-width: 100% !important;
+						max-height: 100% !important;
+						width: 100% !important;
+						height: auto !important;
+					}
+					#wheel:fullscreen .wheel-title {
+						color: #f0ce91 !important;
+					}
+					#wheel:fullscreen input.wheel-title-input {
+						color: #000 !important;
+					}
+				}
+			`}</style>
+			<style global jsx>{`
+				/* Center dialog in fullscreen mode (target Radix data-slot attributes) */
+				body.fullscreen-active [data-slot="dialog-content"],
+				body.fullscreen-active
+					[data-slot="dialog-portal"]
+					[data-slot="dialog-content"],
+				body.fullscreen-active [data-slot="dialog-overlay"] {
+					position: fixed !important;
+					top: 50% !important;
+					left: 50% !important;
+					transform: translate(-50%, -50%) !important;
+					margin: 0 !important;
+					z-index: 99999 !important;
+					max-width: 90vmin !important;
+					width: auto !important;
+				}
+				body.fullscreen-active [data-slot="dialog-overlay"] {
+					z-index: 99998 !important;
+				}
+			`}</style>
+			{/* <div
+				className="bg-red-500 h-[200px] w-[200px]"
+				onClick={(e) => {
+					e.currentTarget.requestFullscreen();
+				}} 
+			>
+				{" "}
+				<button>Full Screen</button>
+				<button onClick={() => document.exitFullscreen()}>
+					Exit fullscreen
+				</button>
+			</div> */}
+			<Navbar
+				onNamesOrderChange={handleNamesOrderChange}
+				onTimerChange={handleTimerChange}
+				onBackgroundChange={handleBackgroundChange}
+				onWinningSoundChange={setWinningSound}
+				onSpinSoundChange={setSpinSound}
+				currentNameOrder={nameOrder}
+				currentTimer={timerDuration}
+				currentWinningSound={winningSound}
+				currentSpinSound={spinSound}
+				audioContextRef={audioContextRef}
+				winningBuffersRef={winningBuffersRef}
+				spinBuffersRef={spinBuffersRef}
+			/>
+			<div className="container mx-auto py-6">
+				<main className="flex md:flex-row flex-col gap-1">
+					<section
+						id="wheel"
+						className={`md:w-[70%] relative ${isFullscreen ? "bg-white" : ""}`}
+						ref={wheelSectionRef}
+					>
+						{/* Title and Fullscreen Header */}
+						<div className="flex items-center justify-center gap-3 mb-4 px-4 z-50">
+							{/* Editable Title */}
+							<div className="flex items-center gap-2 flex-1 justify-center">
+								{isEditingTitle ? (
+									<>
+										<input
+											type="text"
+											value={tempTitle}
+											onChange={(e) => setTempTitle(e.target.value)}
+											onKeyDown={(e) => {
+												if (e.key === "Enter") saveTitle();
+												if (e.key === "Escape") cancelEditTitle();
+											}}
+											className="wheel-title-input text-xl md:text-3xl font-bold text-gray-800 border-2 border-blue-500 rounded px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
+											autoFocus
+										/>
+										<button
+											onClick={saveTitle}
+											className="p-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition"
+											aria-label="Save title"
+										>
+											<Check size={20} />
+										</button>
+										<button
+											onClick={cancelEditTitle}
+											className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition"
+											aria-label="Cancel"
+										>
+											<X size={20} />
+										</button>
+									</>
+								) : (
+									<div
+										className={`flex items-center gap-2 ${lexendDeca.className} tracking-tight `}
+									>
+										<h2
+											className={`wheel-title text-xl md:text-3xl font-bold text-gray-800 `}
+										>
+											{wheelTitle}
+										</h2>
+										<button
+											onClick={startEditingTitle}
+											className="p-2 hover:bg-gray-200 rounded-lg transition"
+											aria-label="Edit title"
+										>
+											<Pencil size={18} className="text-gray-600" />
+										</button>
+									</div>
+								)}
+							</div>
+
+							{/* Fullscreen button - only on md+ screens */}
+							<button
+								onClick={toggleFullscreen}
+								className="hidden md:flex items-center gap-2 bg-black/70 hover:bg-black/90 text-white px-3 py-2 rounded-lg transition-all duration-200 shadow-lg"
+								aria-label={
+									isFullscreen ? "Exit fullscreen" : "Enter fullscreen"
+								}
+							>
+								{isFullscreen ? (
+									<>
+										<Minimize2 size={20} />
+										<span className="text-sm font-semibold">Exit</span>
+									</>
+								) : (
+									<Maximize2 size={20} />
+								)}
+							</button>
+						</div>
+
+						<div className="wheel-canvas-container md:p-8">
+							<canvas
+								ref={canvasRef}
+								className={`cursor-pointer w-full block p-0 ${
+									spinning ? "pointer-events-none" : ""
+								}`}
+								style={{ padding: 0 }}
+								onClick={spinWheel}
+							/>
+						</div>
+						{namesList.length === 0 && (
+							<p className="text-center text-gray-500 mt-1">
+								Add names to the list to spin the wheel
+							</p>
+						)}
+						{!spinning && namesList.length > 0 && (
+							<p className="text-center text-gray-600 mt-1 text-[18px] md:text-[24px] font-bold ">
+								Click or Tap the wheel to spin!
+							</p>
+						)}
+						{spinning && (
+							<p
+								className={`text-center ${masque.className} font-bold ${
+									isFullscreen ? "text-blue-400" : "text-blue-900"
+								} tracking-tight text-[18px] md:text-[24px] mt-2`}
+							>
+								Spinning . . .
+							</p>
+						)}
+
+						{isFullscreen && (
+							<div
+								className={`${
+									showDialog ? "fixed" : "hidden"
+								} left-0 top-0 h-full w-full rounded-[20px] p-4 z-40 justify-center items-center flex`}
+							>
+								<div
+									className={`${magazine.className} border-2 shadow-lg gap-8 relative rounded-[10px] z-50 px-5 min-w-[600px]  flex flex-col items-center justify-center py-6  bg-linear-to-r from-yellow-100 via-yellow-200 to-yellow-400`}
+								>
+									<div className="">
+										<p
+											className={`text-2xl tracking-widest text-yellow-700 font-extralight px-5`}
+										>
+											🎉 The winner is... 🎉
+										</p>
+										<Button
+											variant="ghost"
+											className="absolute right-0 text-[20px] top-0 p-4 font-bold bg-transparent hover:bg-transparent"
+											onClick={() => setShowDialog(false)}
+											aria-label="Close dialog"
+										>
+											<X size={20} />
+										</Button>
+									</div>
+									<div>
+										<p className="text-4xl tracking-widest text-center text-yellow-900">
+											{winner}
+										</p>
+									</div>
+								</div>
+							</div>
+						)}
+					</section>
+
+					<section id="names-list" className="md:w-[25%] my-2 p-4 font-bold">
+						<div className="w-full">
+							<label className="block  mb-2 text-gray-600">
+								Enter names (one per line)
+							</label>
+							<Textarea
+								id="names-input"
+								value={names}
+								onChange={(e) => setNames(e.target.value)}
+								// placeholder="Enter names, one per line"
+								rows={10}
+								className="w-full whitespace-pre min-h-[400px] bg-gray-50 text-gray-800 resize-none text-[18px] md:text-[19px] font-bold border-4 shadow-inner
+   border-gray-300 focus-visible:ring-0 focus-visible:border-blue-300"
+							/>
+							<p className="text-sm text-gray-500 mt-2">
+								{namesList.length} {namesList.length === 1 ? "name" : "names"}{" "}
+								entered
+							</p>
+						</div>
+					</section>
+				</main>
+
+				{!isFullscreen && (
+					<Dialog open={showDialog} onOpenChange={setShowDialog}>
+						<DialogContent
+							className={`${magazine.className} border-2 z-50 flex justify-center py-6  bg-linear-to-r from-yellow-100 via-yellow-200 to-yellow-400`}
+							// Prevent closing when clicking outside/backdrop
+							onPointerDownOutside={(e: any) => {
+								e.preventDefault();
+							}}
+							// Prevent closing with Escape
+							onEscapeKeyDown={(e: any) => {
+								e.preventDefault();
+							}}
+						>
+							<DialogHeader>
+								<DialogTitle
+									className={`text-xl tracking-widest py-2 text-yellow-700 font-extralight pb-3`}
+								>
+									🎉 The winner is... 🎉
+								</DialogTitle>
+
+								<DialogDescription className="text-4xl tracking-widest text-center text-yellow-900">
+									{winner}
+								</DialogDescription>
+							</DialogHeader>
+						</DialogContent>
+					</Dialog>
+				)}
+			</div>
+		</div>
+	);
 }
