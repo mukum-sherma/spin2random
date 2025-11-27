@@ -49,9 +49,9 @@ export default function Home() {
 	const [winningSound, setWinningSound] = useState("small-group-applause");
 	const [spinSound, setSpinSound] = useState("single-spin");
 	const [isFullscreen, setIsFullscreen] = useState(false);
-	const [wheelTitle, setWheelTitle] = useState("Wheel of Names");
+	const [wheelTitle, setWheelTitle] = useState("Enter an Awesome Title");
 	const [isEditingTitle, setIsEditingTitle] = useState(false);
-	const [tempTitle, setTempTitle] = useState("Wheel of Names");
+	const [tempTitle, setTempTitle] = useState("Enter an Awesome Title");
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const wheelSectionRef = useRef<HTMLDivElement>(null);
 	const audioBufferRef = useRef<AudioBuffer | null>(null);
@@ -1004,6 +1004,15 @@ export default function Home() {
 
 	return (
 		<div className="min-h-screen">
+			{/* When spinning, render a full-screen overlay to block all clicks */}
+			{spinning && (
+				<div
+					aria-hidden="true"
+					className="fixed inset-0 z-50 bg-transparent pointer-events-auto cursor-wait"
+					// stop propagation to be safe
+					onClick={(e) => e.stopPropagation()}
+				/>
+			)}
 			<style jsx>{`
 				@media (min-width: 768px) {
 					#wheel:fullscreen {
@@ -1318,6 +1327,60 @@ export default function Home() {
 						</DialogContent>
 					</Dialog>
 				)}
+			</div>
+			<div className="shadow-lg md:h-[60px] h-5 border-b-6"></div>
+			<div className="bg-[#fee4c1]/60">
+				{/* Informational sections: history, description and quick guide placed above footer for SEO */}
+				<section className="container mx-auto max-w-4xl py-10 px-4">
+					<h2 className="text-2xl font-bold text-slate-800 mb-4">
+						About the Spin Wheel
+					</h2>
+					<p className="text-slate-700 leading-relaxed mb-4">
+						Spin wheels have been used for centuries as a simple, visual method
+						of random selection. Carnival-style &quot;Wheel of Fortune&quot;
+						attractions date back to the 19th century and evolved into radio and
+						television game shows in the 20th century. Today, digital spin
+						wheels recreate that excitement for events, classrooms, raffles and
+						giveaways — combining fairness with the thrill of a live reveal.
+					</p>
+
+					<h3 className="text-xl font-semibold text-slate-800 mb-3">
+						Why use SpinWheelQuiz?
+					</h3>
+					<p className="text-slate-700 leading-relaxed mb-6">
+						SpinWheelQuiz is an online spin wheel generator optimized for fast
+						setup, mobile devices and live events. Customize backgrounds, sounds
+						and timers, manage entries quickly and run fair, transparent spins
+						with a polished presentation that keeps audiences engaged.
+					</p>
+
+					<h3 className="text-xl font-semibold text-slate-800 mb-3">
+						Quick Guide — How to Play
+					</h3>
+					<ol className="list-decimal list-inside ml-4 space-y-2 text-slate-700">
+						<li>
+							Enter entries (one per line) in the names area. Use the
+							check/clear controls to manage individual lines.
+						</li>
+						<li>
+							Pick a timer from the Timers menu (2–40s). The app uses sensible
+							accel and decel phases so longer timers feel smoother.
+						</li>
+						<li>
+							Customize the stage: choose backgrounds, spin and winner sounds to
+							match your event.
+						</li>
+						<li>
+							Click or tap the wheel to spin. The wheel will accelerate, cruise
+							and slow naturally until the winner is revealed. You can replay as
+							needed.
+						</li>
+						<li>
+							When the wheel stops, the winner dialog appears with options to
+							copy or export the result.
+						</li>
+					</ol>
+				</section>
 			</div>
 		</div>
 	);

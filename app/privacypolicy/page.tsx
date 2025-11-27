@@ -171,10 +171,14 @@ export default function PrivacyPolicyPage() {
 								8. Children&apos;s Privacy
 							</h2>
 							<p>
-								Our website is not intended for children under the age of 13. We
-								do not knowingly collect personal information from children
-								under 13. If you believe we have collected information from a
-								child under 13, please contact us immediately.
+								SpinWheelQuiz is suitable for children and is designed for fun
+								and enjoyment. Children aged 3 years and up can play and
+								interact with the site — there is almost no age restriction for
+								casual play. We do not intentionally collect more personal
+								information from children than is necessary for the features of
+								the site. If you believe we have collected personal information
+								from a child in error, please contact us and we will promptly
+								investigate and take appropriate action.
 							</p>
 						</section>
 
@@ -197,16 +201,16 @@ export default function PrivacyPolicyPage() {
 							</h2>
 							<p>
 								If you have any questions or concerns about this Privacy Policy
-								or our privacy practices, please contact us at:
+								or our privacy practices :
 							</p>
 							<div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-md">
 								<p>
-									<strong>Email:</strong>{" "}
+									Please contact us at:{" "}
 									<a
-										href="mailto:privacy@spinwheelquiz.com"
+										href="/contactus"
 										className="text-blue-600 hover:underline"
 									>
-										privacy@spinwheelquiz.com
+										Contact page
 									</a>
 								</p>
 								<p className="mt-2">

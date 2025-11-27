@@ -54,10 +54,6 @@ const masque = localFont({
 	src: "../_fonts/masque.ttf",
 	variable: "--font-masque",
 });
-const magazine = localFont({
-	src: "../_fonts/magazine.ttf",
-	variable: "--font-magzine",
-});
 
 const adalima = localFont({
 	src: "../_fonts/adalima.ttf",
@@ -610,7 +606,7 @@ const Navbar = ({
 						<span
 							className={`uppercase font-medium ${adalima.className} mt-1 text-[20px] tracking-widest text-shadow-[0_0px_1px_rgba(255,255,255,0.4)]`}
 						>
-							SpinWheelQuiz
+							<h1>SpinWheelQuiz</h1>
 						</span>
 					</Link>
 				</section>

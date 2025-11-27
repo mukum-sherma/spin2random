@@ -8,18 +8,20 @@ export default function Footer() {
 				{/* Main Footer Content */}
 				<div className="grid md:flex md:justify-around  gap-8 mb-8">
 					{/* Brand Section */}
-					<div>
+					<div className="md:max-w-[60%]">
 						<h3 className="text-2xl font-bold text-white mb-2">
 							SpinWheelQuiz
 						</h3>
 						<p className="text-slate-200 font-medium mb-1">
-							Create and spin customizable prize wheels — fun for events,
-							classrooms and giveaways.
+							Create and spin customizable prize wheels — perfect for events,
+							classrooms, giveaways and online raffles.
 						</p>
 						<p className="text-sm text-slate-300 md:max-w-[90%] ">
-							Build beautiful, shareable spin wheels with custom segments,
-							images, sounds, timers and winner selection — fast and
-							mobile-friendly.
+							Build beautiful, shareable spin wheels with custom backgrounds,
+							images, sounds, timers and fair random winner selection — fast,
+							responsive and optimized for mobile. Use our online spin wheel
+							generator for classroom games, giveaways, prize drawings, or team
+							building activities.
 						</p>
 					</div>
 

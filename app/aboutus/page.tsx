@@ -2,9 +2,25 @@ import type { Metadata } from "next";
 import NavbarBanner from "../_components/navbar-banner";
 
 export const metadata: Metadata = {
-	title: "About Us",
+	title: "About SpinWheelQuiz — About Us",
 	description:
-		"Learn more about SpinWheelQuiz — create, customize and spin prize wheels for events, classrooms and giveaways.",
+		"About SpinWheelQuiz — learn how our customizable online spin wheel helps with giveaways, classroom picks and live events.",
+	keywords: [
+		"spin wheel",
+		"prize wheel",
+		"online spin wheel",
+		"wheel of names",
+		"raffle spinner",
+		"giveaway wheel",
+		"random picker",
+		"classroom activity",
+	],
+	openGraph: {
+		title: "About SpinWheelQuiz",
+		description:
+			"Learn about SpinWheelQuiz — a fast, mobile-friendly online spin wheel for events, classrooms and giveaways.",
+		images: ["/images/img1.jpg"],
+	},
 };
 
 export default function AboutUsPage() {
@@ -44,8 +60,10 @@ export default function AboutUsPage() {
 						</p>
 						<ul className="list-disc list-inside space-y-2 ml-4">
 							<li>
-								<strong>Custom Segments:</strong> Add labels, colors and images
-								to each wheel slice.
+								<strong>Custom backgrounds:</strong> Select one or more
+								full-screen background images to set the stage for your wheel
+								(choose multiple images to rotate or preview backgrounds before
+								spinning).
 							</li>
 							<li>
 								<strong>Sound Effects:</strong> Choose spin and winning sounds
