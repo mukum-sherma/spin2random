@@ -1,0 +1,16 @@
+# robots.txt for SpinWheelQuiz
+# Replace 'https://your-domain.com' with your production domain before deploying
+
+User-agent: *
+Allow: /
+# Disallow typical private/back-end endpoints
+Disallow: /api/
+Disallow: /_next/
+Disallow: /node_modules/
+
+# Crawl-delay may help reduce server load (seconds between requests)
+Crawl-delay: 5
+
+# Preferred sitemap location (update to your production URL)
+Sitemap: https://your-domain.com/sitemap.xml
+Host: https://your-domain.com
