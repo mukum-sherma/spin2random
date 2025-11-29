@@ -74,6 +74,8 @@ export default function Home() {
 	// Track when a fullpage image is applied to the body and its computed contrast color
 	const [bodyBgIsImage, setBodyBgIsImage] = useState(false);
 	const [bodyContrast, setBodyContrast] = useState<string>("");
+	// softened text color (reduced contrast) applied to body and used for text color
+	const [bodyTextColor, setBodyTextColor] = useState<string>("");
 	// When the user selects an image for the wheel, we store its src here
 	const [wheelImageSrc, setWheelImageSrc] = useState<string | null>(null);
 	const [wheelTextColor, setWheelTextColor] = useState<string>("#000");
@@ -118,14 +120,15 @@ export default function Home() {
 		if (!bodyBgIsImage) return undefined;
 		const c = (bodyContrast || "").toLowerCase();
 		const isWhite = c === "#ffffff" || c === "#fff" || c.includes("white");
-		const stroke = isWhite ? "rgba(0,0,0,0.9)" : "rgba(255,255,255,0.95)";
+		// Softer stroke and shadow for a pleasing, reduced contrast look
+		const stroke = isWhite ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.62)";
 		const blur = isWhite
-			? "0 3px 8px rgba(0,0,0,0.65)"
-			: "0 3px 8px rgba(255,255,255,0.25)";
+			? "0 2px 6px rgba(0,0,0,0.42)"
+			: "0 2px 6px rgba(255,255,255,0.18)";
 		const outline = `${stroke} -1px -1px 0, ${stroke} 1px -1px 0, ${stroke} -1px 1px 0, ${stroke} 1px 1px 0`;
 		const textShadow = `${outline}, ${blur}`;
 		return {
-			color: bodyContrast || undefined,
+			color: bodyTextColor || undefined,
 			textShadow,
 		} as React.CSSProperties;
 	}, [bodyBgIsImage, bodyContrast]);
@@ -136,11 +139,13 @@ export default function Home() {
 		if (!bodyBgIsImage) return undefined;
 		const c = (bodyContrast || "").toLowerCase();
 		const isWhite = c === "#ffffff" || c === "#fff" || c.includes("white");
-		const stroke = isWhite ? "rgba(0,0,0,0.95)" : "rgba(255,255,255,0.95)";
-		// Only return stroke (border) and a strong contrasting shadow. Do not change background color.
+		// Use a gentler border and shadow that still contrasts but is visually pleasing
+		const stroke = isWhite ? "rgba(0,0,0,0.62)" : "rgba(255,255,255,0.65)";
 		return {
-			border: `2px solid ${stroke}`,
-			boxShadow: `0 8px 28px rgba(0,0,0,${isWhite ? 0.6 : 0.2})`,
+			border: `1px solid ${stroke}`,
+			boxShadow: isWhite
+				? `0 6px 18px rgba(0,0,0,0.32)`
+				: `0 6px 18px rgba(0,0,0,0.08)`,
 		} as React.CSSProperties;
 	}, [bodyBgIsImage, bodyContrast]);
 	const [winningSound, setWinningSound] = useState("small-group-applause");
@@ -634,6 +639,7 @@ export default function Home() {
 			document.body.style.color = "";
 			setBodyBgIsImage(false);
 			setBodyContrast("");
+			setBodyTextColor("");
 		} else if (backgroundSelection?.type === "image") {
 			// If the selected image is a fullpage image, set the body background.
 			// If it's a wheel image, use it to fill wheel partitions.
@@ -652,10 +658,17 @@ export default function Home() {
 						const blob = await res.blob();
 						const bmp = await createImageBitmap(blob);
 						const contrast = computeContrastFromBitmap(bmp);
-						document.body.style.color = contrast;
-						// set state so UI can adapt (text stroke/shadow, button contrast)
+						// soften the text color so it's slightly less extreme than pure black/white
+						const softened =
+							contrast === "#ffffff"
+								? "rgba(255,255,255,0.94)"
+								: "rgba(0,0,0,0.92)";
+						document.body.style.color = softened;
+						// set state so UI can adapt (we keep raw contrast for isWhite checks,
+						// and bodyTextColor for actual CSS color values)
 						setBodyBgIsImage(true);
 						setBodyContrast(contrast);
+						setBodyTextColor(softened);
 					} catch (err) {
 						console.warn("Failed to compute contrast for fullpage image:", err);
 					}
@@ -676,6 +689,7 @@ export default function Home() {
 			document.body.style.backgroundRepeat = "";
 			setBodyBgIsImage(false);
 			setBodyContrast("");
+			setBodyTextColor("");
 		}
 	}, [backgroundSelection]);
 
