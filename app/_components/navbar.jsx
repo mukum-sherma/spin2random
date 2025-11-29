@@ -880,7 +880,7 @@ const Navbar = ({
 																</div>
 															) : imageFiles.length === 0 ? (
 																<p className="text-sm text-muted-foreground py-4 text-center">
-																	No images found in /public/images/wheel
+																	No images found in /public/images/fullpage
 																</p>
 															) : (
 																<div className="flex flex-wrap gap-2 max-h-[300px] overflow-y-auto">
@@ -889,11 +889,13 @@ const Navbar = ({
 																			key={img}
 																			className="w-[100px] h-[100px] cursor-pointer rounded overflow-hidden border-2 border-muted hover:border-primary transition-colors relative bg-muted"
 																			onClick={() =>
-																				handleImageClick(`/images/wheel/${img}`)
+																				handleImageClick(
+																					`/images/fullpage/${img}`
+																				)
 																			}
 																		>
 																			<Image
-																				src={`/images/wheel/${img}`}
+																				src={`/images/fullpage/${img}`}
 																				alt={`Background ${img}`}
 																				fill
 																				sizes="100px"

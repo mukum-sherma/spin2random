@@ -791,7 +791,36 @@ export default function Home() {
 				displayText += "...";
 			}
 
-			ctx.fillText(displayText, radius * 0.65, fontSize * 0.3);
+			// If a wheel image is present, draw a subtle contrasting stroke and
+			// shadow behind the text to ensure legibility against the image.
+			if (wheelImageBitmapRef.current) {
+				// Choose stroke color opposite to the text color for contrast
+				const isTextWhite =
+					(wheelTextColor || "").toLowerCase() === "#ffffff" ||
+					(wheelTextColor || "").toLowerCase() === "#fff";
+				const strokeColor = isTextWhite
+					? "rgba(0,0,0,0.65)"
+					: "rgba(255,255,255,0.9)";
+
+				// Subtle shadow to lift text slightly (cleared after)
+				ctx.shadowColor = isTextWhite
+					? "rgba(0,0,0,0.25)"
+					: "rgba(255,255,255,0.18)";
+				ctx.shadowBlur = Math.max(1, Math.round(fontSize * 0.08));
+
+				ctx.lineJoin = "round";
+				ctx.lineWidth = Math.max(2, Math.round(fontSize * 0.12));
+				ctx.strokeStyle = strokeColor;
+				ctx.strokeText(displayText, radius * 0.65, fontSize * 0.3);
+				// draw filled text on top
+				ctx.fillText(displayText, radius * 0.65, fontSize * 0.3);
+
+				// reset shadow so it doesn't affect other drawings
+				ctx.shadowColor = "transparent";
+				ctx.shadowBlur = 0;
+			} else {
+				ctx.fillText(displayText, radius * 0.65, fontSize * 0.3);
+			}
 			ctx.restore();
 		});
 
