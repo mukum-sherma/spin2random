@@ -35,13 +35,10 @@ import {
 	AccordionTrigger,
 } from "@/components/ui/accordion";
 import {
-	ArrowDownAZ,
-	ArrowUpAZ,
 	Image as ImageIcon,
 	Music,
 	Palette,
 	RotateCcw,
-	Shuffle,
 	Timer,
 	Trophy,
 	Volume2,
@@ -99,12 +96,10 @@ const winningAudioFiles = [
 ];
 
 const Navbar = ({
-	onNamesOrderChange,
 	onTimerChange,
 	onBackgroundChange,
 	onWinningSoundChange,
 	onSpinSoundChange,
-	currentNameOrder = "shuffle",
 	currentTimer = 10,
 	currentWinningSound = "small-group-applause",
 	currentSpinSound = "single-spin",
@@ -112,7 +107,6 @@ const Navbar = ({
 	winningBuffersRef,
 	spinBuffersRef,
 }) => {
-	const [orderValue, setOrderValue] = useState(currentNameOrder);
 	const [timerValue, setTimerValue] = useState(String(currentTimer));
 	const [winningSoundValue, setWinningSoundValue] =
 		useState(currentWinningSound);
@@ -121,10 +115,6 @@ const Navbar = ({
 	const [loadingImages, setLoadingImages] = useState(true);
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 	const previewSourceRef = useRef(null);
-
-	useEffect(() => {
-		setOrderValue(currentNameOrder);
-	}, [currentNameOrder]);
 
 	useEffect(() => {
 		setTimerValue(String(currentTimer));
@@ -152,14 +142,6 @@ const Navbar = ({
 				setLoadingImages(false);
 			});
 	}, [audioContextRef, winningBuffersRef]);
-
-	const handleOrderChange = useCallback(
-		(value) => {
-			setOrderValue(value);
-			onNamesOrderChange?.(value);
-		},
-		[onNamesOrderChange]
-	);
 
 	const handleTimerChange = useCallback(
 		(value) => {
@@ -317,50 +299,6 @@ const Navbar = ({
 			<Menubar
 				className={`${masque.className} tracking-wide text-[#404040] bg-transparent border-0 shadow-none md:flex-row flex-col items-stretch h-auto space-y-2 md:space-y-0`}
 			>
-				<MenubarMenu>
-					<MenubarTrigger className="cursor-pointer hover:text-orange-700 transition-colors text-[13px] w-full md:w-auto justify-start">
-						<Shuffle className="mr-2 h-4 w-4 " />
-						Names Orders
-					</MenubarTrigger>
-					<MenubarContent className="min-w-[230px] max-md:hidden">
-						<MenubarLabel>Sort the wheel entries</MenubarLabel>
-						<MenubarSeparator />
-						{/* <RadioGroup
-							defaultValue="comfortable"
-							value={orderValue}
-							onValueChange={handleOrderChange}
-							className="p-1"
-						>
-							<div className="flex items-center gap-2">
-								<RadioGroupItem value="shuffle" id="r1" />
-								<Label htmlFor="r1">Shuffle</Label>
-							</div>
-							<div className="flex items-center gap-2">
-								<RadioGroupItem</MenubarRadioItem> value="ascending" id="r2" />
-								<Label htmlFor="r2">Ascending</Label>
-							</div>
-							<div className="flex items-center gap-2">
-								<RadioGroupItem value="descending" id="r3" />
-								<Label htmlFor="r3">Descending</Label>
-							</div>
-						</RadioGroup> */}
-						<MenubarRadioGroup
-							value={orderValue}
-							onValueChange={handleOrderChange}
-						>
-							<MenubarRadioItem value="shuffle">
-								<Shuffle className="h-4 w-4" /> Shuffle
-							</MenubarRadioItem>
-							<MenubarRadioItem value="ascending">
-								<ArrowUpAZ className="h-4 w-4" /> Ascending
-							</MenubarRadioItem>
-							<MenubarRadioItem value="descending">
-								<ArrowDownAZ className="h-4 w-4" /> Descending
-							</MenubarRadioItem>
-						</MenubarRadioGroup>
-					</MenubarContent>
-				</MenubarMenu>
-
 				<MenubarMenu>
 					<MenubarTrigger className="cursor-pointer hover:text-orange-700 text-[13px] transition-colors w-full md:w-auto justify-start">
 						<Timer className="mr-2 h-4 w-4" /> Timers
@@ -569,13 +507,11 @@ const Navbar = ({
 			</Menubar>
 		),
 		[
-			orderValue,
 			timerValue,
 			spinSoundValue,
 			winningSoundValue,
 			imageFiles,
 			loadingImages,
-			handleOrderChange,
 			handleTimerChange,
 			handleWinningSoundChange,
 			handleSpinSoundChange,
@@ -646,63 +582,6 @@ const Navbar = ({
 							className="w-[280px] max-h-[calc(100vh-80px)] overflow-y-auto md:hidden"
 						>
 							<Accordion type="single" collapsible className="w-full">
-								{/* Names Orders */}
-								<AccordionItem value="names-orders" className="border-0">
-									<AccordionTrigger className="px-3 py-2 text-sm font-bold text-orange-900 hover:bg-orange-100 rounded-md hover:no-underline">
-										<div className="flex items-center gap-2 text-[15px]">
-											<Shuffle className="h-4 w-4" />
-											Names Orders
-										</div>
-									</AccordionTrigger>
-									<AccordionContent className="px-2 pb-2">
-										<div className="px-2 py-1.5 text-sm font-semibold">
-											Sort the wheel entries
-										</div>
-										<div className="h-px bg-border my-1" />
-										<div className="p-1">
-											<button
-												onClick={() => handleOrderChange("shuffle")}
-												className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent ${
-													orderValue === "shuffle" ? "bg-accent" : ""
-												}`}
-											>
-												<div className="w-4 h-4 rounded-full border-2 border-primary flex items-center justify-center">
-													{orderValue === "shuffle" && (
-														<div className="w-2 h-2 rounded-full bg-primary" />
-													)}
-												</div>
-												<Shuffle className="h-4 w-4" /> Shuffle
-											</button>
-											<button
-												onClick={() => handleOrderChange("ascending")}
-												className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent ${
-													orderValue === "ascending" ? "bg-accent" : ""
-												}`}
-											>
-												<div className="w-4 h-4 rounded-full border-2 border-primary flex items-center justify-center">
-													{orderValue === "ascending" && (
-														<div className="w-2 h-2 rounded-full bg-primary" />
-													)}
-												</div>
-												<ArrowUpAZ className="h-4 w-4" /> Ascending
-											</button>
-											<button
-												onClick={() => handleOrderChange("descending")}
-												className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent ${
-													orderValue === "descending" ? "bg-accent" : ""
-												}`}
-											>
-												<div className="w-4 h-4 rounded-full border-2 border-primary flex items-center justify-center">
-													{orderValue === "descending" && (
-														<div className="w-2 h-2 rounded-full bg-primary" />
-													)}
-												</div>
-												<ArrowDownAZ className="h-4 w-4" /> Descending
-											</button>
-										</div>
-									</AccordionContent>
-								</AccordionItem>
-
 								{/* Timers */}
 								<AccordionItem value="timers" className="border-0">
 									<AccordionTrigger className="px-3 py-2 text-sm font-bold text-orange-900 hover:bg-orange-100 rounded-md hover:no-underline">

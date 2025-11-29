@@ -1353,12 +1353,10 @@ export default function Home() {
 				</button>
 			</div> */}
 			<Navbar
-				onNamesOrderChange={handleNamesOrderChange}
 				onTimerChange={handleTimerChange}
 				onBackgroundChange={handleBackgroundChange}
 				onWinningSoundChange={setWinningSound}
 				onSpinSoundChange={setSpinSound}
-				currentNameOrder={nameOrder}
 				currentTimer={timerDuration}
 				currentWinningSound={winningSound}
 				currentSpinSound={spinSound}
