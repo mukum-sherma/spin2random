@@ -716,16 +716,14 @@ export default function Home() {
 				ctx.clip();
 				try {
 					const img = wheelImageBitmapRef.current as ImageBitmap;
-					// Draw the image sized to cover the whole wheel circle so each sector
-					// shows the same portion of the image. This keeps separators and
-					// center circle drawable on top later.
-					ctx.drawImage(
-						img,
-						centerX - radius,
-						centerY - radius,
-						radius * 2,
-						radius * 2
-					);
+					// Rotate the image content by the current wheel rotation so the image
+					// appears to spin with the wheel. We translate to the wheel center,
+					// rotate the canvas, draw the image centered, then restore.
+					ctx.save();
+					ctx.translate(centerX, centerY);
+					ctx.rotate((rotation * Math.PI) / 180);
+					ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
+					ctx.restore();
 				} catch (e) {
 					// ignore draw errors
 					console.warn("Failed to draw wheel image into canvas segment:", e);
@@ -941,23 +939,31 @@ export default function Home() {
 		ctx.fillText("SPIN", centerX, centerY + textOffsetY);
 	}, [namesList, rotation, colors, spinning, wheelTextColor]);
 
+	// keep a ref to the latest drawWheel so other effects can call it without
+	// adding drawWheel to their dependency arrays (which would cause re-runs).
+	const drawWheelRef = useRef<() => void>(() => {});
+
 	useEffect(() => {
+		drawWheelRef.current = drawWheel;
 		drawWheel();
 	}, [drawWheel]);
 
 	// Load the selected wheel image into an ImageBitmap for fast canvas draws.
 	useEffect(() => {
 		let mounted = true;
-		// clear previous bitmap
-		wheelImageBitmapRef.current = null;
+
+		// If no wheel image is selected, clear bitmap and redraw.
 		if (!wheelImageSrc) {
-			// no wheel image selected: ensure fallback redraw
-			drawWheel();
+			wheelImageBitmapRef.current = null;
+			// use latest draw function
+			drawWheelRef.current?.();
 			return () => {
 				mounted = false;
 			};
 		}
 
+		// When wheelImageSrc changes, load the new bitmap. Do NOT clear the
+		// existing bitmap upfront — keep it visible until the new image is ready.
 		(async () => {
 			try {
 				const res = await fetch(wheelImageSrc as string);
@@ -972,20 +978,20 @@ export default function Home() {
 					} catch (err) {
 						console.warn("Failed to compute contrast for wheel image:", err);
 					}
-					// redraw wheel now that bitmap is ready
-					drawWheel();
+					// redraw wheel now that bitmap is ready using the latest draw function
+					drawWheelRef.current?.();
 				}
 			} catch (err) {
 				console.warn("Failed to load wheel image:", err);
-				wheelImageBitmapRef.current = null;
-				drawWheel();
+				// leave previous bitmap (if any) in place; attempt redraw
+				drawWheelRef.current?.();
 			}
 		})();
 
 		return () => {
 			mounted = false;
 		};
-	}, [wheelImageSrc, drawWheel]);
+	}, [wheelImageSrc]);
 
 	const determineWinner = useCallback(
 		(finalRotation: number) => {
