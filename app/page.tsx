@@ -1480,7 +1480,10 @@ export default function Home() {
 							{/* Editable Title */}
 							<div className="flex items-center gap-2 flex-1 justify-center">
 								{isEditingTitle ? (
-									<div key={`line-wrap-${idx}-${controlsTick}`}>
+									<div
+										key={`title-edit-${controlsTick}`}
+										className="flex items-center gap-2"
+									>
 										<input
 											type="text"
 											value={tempTitle}
@@ -1490,6 +1493,7 @@ export default function Home() {
 												if (e.key === "Escape") cancelEditTitle();
 											}}
 											className="wheel-title-input text-xl md:text-3xl font-bold text-gray-800 border-2 border-blue-500 rounded px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
+											style={getTextContrastStyles() || undefined}
 											autoFocus
 										/>
 										<button
@@ -1787,11 +1791,11 @@ export default function Home() {
 										const isIncluded = includeMap[name] !== false;
 										return (
 											<div key={`line-wrap-${idx}-${controlsTick}`}>
-												{/* Overlay to dim the line text when unchecked. Positioned over textarea text. */}
+												{/* Overlay to show the line text with a strike-through when unchecked. Positioned over textarea text. */}
 												{!isIncluded && (
 													<div
 														key={`line-overlay-${idx}-${controlsTick}`}
-														className="absolute left-4 pointer-events-none text-[18px] md:text-[19px] font-bold text-gray-400 leading-7"
+														className="absolute left-4 pointer-events-none text-[18px] md:text-[19px] decoration-red-400 font-bold text-gray-500 leading-7 line-through"
 														style={{
 															top: calcIconTop(textareaRef.current, idx) + "px",
 														}}
