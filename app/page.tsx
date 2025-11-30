@@ -79,6 +79,21 @@ export default function Home() {
 	// When the user selects an image for the wheel, we store its src here
 	const [wheelImageSrc, setWheelImageSrc] = useState<string | null>(null);
 	const [wheelTextColor, setWheelTextColor] = useState<string>("#000");
+	// map of name (trimmed) -> include boolean. If true (or missing) name is included on wheel.
+	const [includeMap, setIncludeMap] = useState<Record<string, boolean>>({});
+
+	// Initialize includeMap from initial names (preserve any existing flags)
+	useEffect(() => {
+		setIncludeMap((prev) => {
+			const lines = names.split("\n").map((l) => l.trim());
+			const next: Record<string, boolean> = {};
+			for (const ln of lines) {
+				if (!ln) continue;
+				next[ln] = prev[ln] ?? true;
+			}
+			return next;
+		});
+	}, [names]);
 	// page text color state removed; we set document.body.style.color directly when needed
 
 	// Compute a simple contrast color (black or white) from an ImageBitmap by
@@ -131,7 +146,7 @@ export default function Home() {
 			color: bodyTextColor || undefined,
 			textShadow,
 		} as React.CSSProperties;
-	}, [bodyBgIsImage, bodyContrast]);
+	}, [bodyBgIsImage, bodyContrast, bodyTextColor]);
 
 	const getButtonContrastStyles = useCallback(():
 		| React.CSSProperties
@@ -175,8 +190,9 @@ export default function Home() {
 	const MAX_HISTORY = 200;
 	const [canUndo, setCanUndo] = useState(false);
 	const [focusedLine, setFocusedLine] = useState<number | null>(null);
-	const [showDeleteIcon, setShowDeleteIcon] = useState(false);
-	const [iconTop, setIconTop] = useState<number>(0);
+	// controlsTick forces a rerender when textarea scroll or similar events
+	// occur so per-line control positions (computed by calcIconTop) update.
+	const [controlsTick, setControlsTick] = useState(0);
 
 	const calcIconTop = (ta?: HTMLTextAreaElement | null, lineIdx?: number) => {
 		const el = ta ?? textareaRef.current;
@@ -202,17 +218,14 @@ export default function Home() {
 		const el = textareaRef.current;
 		if (!el) {
 			setFocusedLine(null);
-			setShowDeleteIcon(false);
 			return;
 		}
 		const sel = el.selectionStart ?? 0;
 		const idx = el.value.slice(0, sel).split("\n").length - 1;
 		setFocusedLine(idx);
-		const lines = el.value.split("\n");
-		const text = lines[idx] ?? "";
-		const shouldShow = text.trim() !== "" && document.activeElement === el;
-		setShowDeleteIcon(shouldShow);
-		setIconTop(calcIconTop(el, idx));
+		// We no longer toggle a single focused-line control. Controls for every
+		// non-empty line are rendered; force a rerender so positions update.
+		setControlsTick((t) => t + 1);
 	};
 
 	const handleKeyDownInTextarea = () => {
@@ -243,6 +256,17 @@ export default function Home() {
 		// push new state into history
 		pushHistory(v);
 		setNames(v);
+		// Sync includeMap: preserve existing include flags for matching trimmed names,
+		// default to true for new names.
+		setIncludeMap((prev) => {
+			const lines = v.split("\n").map((l) => l.trim());
+			const next: Record<string, boolean> = {};
+			for (const ln of lines) {
+				if (!ln) continue;
+				next[ln] = prev[ln] ?? true;
+			}
+			return next;
+		});
 		// update caret/hover derived UI
 		setTimeout(updateFocusedLine, 0);
 	};
@@ -267,18 +291,23 @@ export default function Home() {
 		setTimeout(updateFocusedLine, 0);
 	};
 
-	const handleClearFocusedLine = () => {
+	const handleClearLine = (index: number) => {
 		const el = textareaRef.current;
-		if (!el || focusedLine === null) return;
+		if (!el) return;
 		const lines = el.value.split("\n");
-		// clear the text of the focused line
-		lines[focusedLine] = "";
+		const clearedName = (lines[index] || "").trim();
+		lines[index] = "";
+		if (clearedName) {
+			setIncludeMap((prev) => {
+				const copy = { ...prev };
+				delete copy[clearedName];
+				return copy;
+			});
+		}
 		const newValue = lines.join("\n");
 		setNames(newValue);
-		// compute caret position at start of that line
-		const pos = lines
-			.slice(0, focusedLine)
-			.reduce((acc, l) => acc + l.length + 1, 0);
+		// position caret at start of the cleared line
+		const pos = lines.slice(0, index).reduce((acc, l) => acc + l.length + 1, 0);
 		setTimeout(() => {
 			if (textareaRef.current) {
 				textareaRef.current.focus();
@@ -287,6 +316,13 @@ export default function Home() {
 				updateFocusedLine();
 			}
 		}, 0);
+	};
+
+	const handleToggleInclude = (index: number, checked: boolean) => {
+		const lines = names.split("\n").map((l) => l.trim());
+		const name = lines[index] ?? "";
+		if (!name) return;
+		setIncludeMap((prev) => ({ ...prev, [name]: checked }));
 	};
 
 	// Initialize Web Audio API for better performance on mobile
@@ -532,7 +568,20 @@ export default function Home() {
 	const handleNamesOrderChange = useCallback(
 		(order: NameOrder) => {
 			setNameOrder(order);
-			setNames((prev) => reorderNames(order, prev));
+			setNames((prev) => {
+				const next = reorderNames(order, prev);
+				// update includeMap to preserve inclusion by name after reorder
+				setIncludeMap((prevMap) => {
+					const lines = next.split("\n").map((l) => l.trim());
+					const nextMap: Record<string, boolean> = {};
+					for (const ln of lines) {
+						if (!ln) continue;
+						nextMap[ln] = prevMap[ln] ?? true;
+					}
+					return nextMap;
+				});
+				return next;
+			});
 		},
 		[reorderNames]
 	);
@@ -702,14 +751,11 @@ export default function Home() {
 			document.body.style.backgroundRepeat = "";
 		};
 	}, []);
-	const namesList = useMemo(
-		() =>
-			names
-				.split("\n")
-				.filter((name) => name.trim() !== "")
-				.map((name) => name.trim()),
-		[names]
-	);
+	// Build names list from textarea but respect includeMap (names mapped by trimmed value)
+	const namesList = useMemo(() => {
+		const lines = names.split("\n").map((n) => n.trim());
+		return lines.filter((name) => name !== "" && includeMap[name] !== false);
+	}, [names, includeMap]);
 
 	const colors = useMemo(
 		() => [
@@ -1434,7 +1480,7 @@ export default function Home() {
 							{/* Editable Title */}
 							<div className="flex items-center gap-2 flex-1 justify-center">
 								{isEditingTitle ? (
-									<>
+									<div key={`line-wrap-${idx}-${controlsTick}`}>
 										<input
 											type="text"
 											value={tempTitle}
@@ -1460,7 +1506,7 @@ export default function Home() {
 										>
 											<X size={20} />
 										</button>
-									</>
+									</div>
 								) : (
 									<div
 										className={`flex items-center gap-2 ${lexendDeca.className} tracking-tight `}
@@ -1716,7 +1762,7 @@ export default function Home() {
 										</DropdownMenuContent>
 									</DropdownMenu>
 								</div>
-								<div className="relative flex-1">
+								<div className="relative flex-1 w-full">
 									<textarea
 										id="names-input"
 										ref={(el) => {
@@ -1730,23 +1776,64 @@ export default function Home() {
 										onKeyUp={updateFocusedLine}
 										onKeyDown={handleKeyDownInTextarea}
 										onSelect={updateFocusedLine}
-										onScroll={() => setIconTop(calcIconTop())}
-										className="w-full whitespace-pre min-h-[400px] rounded-[7px] bg-gray-50 text-gray-800 resize-none text-[18px] md:text-[19px] font-bold border-4 shadow-inner border-gray-300 focus-visible:ring-0 focus-visible:border-blue-300 px-3 pt-3 pb-8"
+										onScroll={() => setControlsTick((t) => t + 1)}
+										className="w-full whitespace-pre min-h-[400px] rounded-[7px] bg-gray-50 text-gray-800 resize-none text-[18px] md:text-[19px] font-bold border-4 shadow-inner border-gray-300 focus-visible:ring-0 focus-visible:border-blue-300 px-3 pt-3 pb-8 leading-7"
 									/>
 
-									{/* Delete icon shown inline at right edge of focused line when that line has text */}
-									{showDeleteIcon && (
-										<button
-											type="button"
-											onMouseDown={(e) => e.preventDefault()}
-											onClick={handleClearFocusedLine}
-											aria-label="Clear line"
-											className="absolute right-2 bg-white/90 rounded-full p-1 shadow-md hover:bg-white"
-											style={{ top: iconTop + "px" }}
-										>
-											<X size={16} />
-										</button>
-									)}
+									{/* Per-line controls and overlays */}
+									{names.split("\n").map((ln, idx) => {
+										const name = ln.trim();
+										if (!name) return null;
+										const isIncluded = includeMap[name] !== false;
+										return (
+											<div key={`line-wrap-${idx}-${controlsTick}`}>
+												{/* Overlay to dim the line text when unchecked. Positioned over textarea text. */}
+												{!isIncluded && (
+													<div
+														key={`line-overlay-${idx}-${controlsTick}`}
+														className="absolute left-3 pointer-events-none text-[18px] md:text-[19px] font-bold text-gray-400 leading-7"
+														style={{
+															top: calcIconTop(textareaRef.current, idx) + "px",
+														}}
+													>
+														{name}
+													</div>
+												)}
+												<div
+													key={`line-controls-${idx}-${controlsTick}`}
+													className="absolute right-3 flex items-center gap-2"
+													style={{
+														top: calcIconTop(textareaRef.current, idx) + "px",
+													}}
+												>
+													{/* Checkbox: keep textarea focused by preventing default on mouseDown,
+													but toggle inclusion onClick so the first click takes effect. */}
+													<input
+														type="checkbox"
+														aria-label={`Include ${name} on wheel`}
+														onMouseDown={(e) => e.preventDefault()}
+														checked={isIncluded}
+														onClick={() =>
+															handleToggleInclude(idx, !isIncluded)
+														}
+														className="w-5 h-5 bg-white rounded"
+													/>
+
+													<button
+														type="button"
+														onPointerDown={(e) => {
+															e.preventDefault();
+															handleClearLine(idx);
+														}}
+														aria-label={`Clear line ${idx + 1}`}
+														className="w-5 h-5 bg-white/90 rounded shadow-md flex items-center justify-center hover:bg-white p-0"
+													>
+														<X size={18} color="#404040" />
+													</button>
+												</div>
+											</div>
+										);
+									})}
 
 									{/* Reset / Undo buttons placed bottom-right inside textarea wrapper (now relative to textarea only) */}
 									<div className="absolute right-2 bottom-2 flex gap-2 p-0.5">
