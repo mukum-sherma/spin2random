@@ -1,6 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import {
+	useState,
+	useRef,
+	useEffect,
+	useLayoutEffect,
+	useCallback,
+	useMemo,
+} from "react";
 import dynamic from "next/dynamic";
 // using native textarea here so we can overlay per-line controls
 import {
@@ -20,6 +27,7 @@ import {
 	ArrowUp,
 	ArrowDown,
 	LoaderPinwheel,
+	Palette,
 } from "lucide-react";
 import Image from "next/image";
 import {
@@ -243,6 +251,40 @@ export default function Home() {
 	// controlsTick forces a rerender when textarea scroll or similar events
 	// occur so per-line control positions (computed by calcIconTop) update.
 	const [controlsTick, setControlsTick] = useState(0);
+	// Advanced mode: show extra per-line UI blocks below each textarea line
+	const [advancedMode, setAdvancedMode] = useState(false);
+
+	// measured textarea size (used to render identical-size div in Advanced mode)
+	const [textareaSize, setTextareaSize] = useState<{
+		width: number;
+		height: number;
+	}>({
+		width: 0,
+		height: 0,
+	});
+
+	const measureTextarea = () => {
+		const el = textareaRef.current;
+		if (!el) return { width: 0, height: 0 };
+		return { width: el.clientWidth, height: el.clientHeight };
+	};
+
+	useLayoutEffect(() => {
+		// measure after DOM mutations; only set state when size actually changes
+		const apply = () => {
+			const s = measureTextarea();
+			if (!s) return;
+			setTextareaSize((prev) => {
+				if (prev.width === s.width && prev.height === s.height) return prev;
+				return s;
+			});
+		};
+
+		apply();
+		const onResize = () => apply();
+		window.addEventListener("resize", onResize);
+		return () => window.removeEventListener("resize", onResize);
+	}, [advancedMode, names, controlsTick]);
 
 	const calcIconTop = (ta?: HTMLTextAreaElement | null, lineIdx?: number) => {
 		const el = ta ?? textareaRef.current;
@@ -264,6 +306,22 @@ export default function Home() {
 		}
 	};
 
+	const getLineHeight = () => {
+		const el = textareaRef.current;
+		if (!el) return 20;
+		try {
+			const style = window.getComputedStyle(el);
+			let lineHeight = parseFloat(style.lineHeight || "");
+			if (isNaN(lineHeight) || lineHeight === 0) {
+				const fontSize = parseFloat(style.fontSize || "16") || 16;
+				lineHeight = fontSize * 1.2;
+			}
+			return lineHeight;
+		} catch {
+			return 20;
+		}
+	};
+
 	const updateFocusedLine = () => {
 		const el = textareaRef.current;
 		if (!el) {
@@ -272,6 +330,52 @@ export default function Home() {
 		}
 		const sel = el.selectionStart ?? 0;
 		const idx = el.value.slice(0, sel).split("\n").length - 1;
+
+		// If the cursor moved to a new line, remove any other empty lines
+		// except for the current line. This keeps the list compact when
+		// the user navigates to a fresh line.
+		const prevIdx = focusedLine;
+		if (prevIdx !== idx) {
+			const lines = el.value.split("\n");
+			// detect empty lines (whitespace-only) excluding current idx
+			const emptyOthers = lines.some((l, i) => i !== idx && l.trim() === "");
+			if (emptyOthers) {
+				// compute new names with other empty lines removed
+				let charPos = 0; // new caret position after compaction
+				const kept: string[] = [];
+				for (let i = 0; i < lines.length; i++) {
+					const isEmpty = lines[i].trim() === "";
+					if (isEmpty && i !== idx) continue;
+					// if this is before the original idx, add to charPos
+					if (i < idx) {
+						charPos += lines[i].length + 1; // include newline
+					}
+					kept.push(lines[i]);
+				}
+				const newValue = kept.join("\n");
+				setNames(newValue);
+				// restore caret roughly to the same logical line
+				setTimeout(() => {
+					if (textareaRef.current) {
+						textareaRef.current.focus();
+						textareaRef.current.selectionStart = Math.min(
+							charPos,
+							textareaRef.current.value.length
+						);
+						textareaRef.current.selectionEnd =
+							textareaRef.current.selectionStart;
+						// update focused line state after change
+						const sel2 = textareaRef.current.selectionStart ?? 0;
+						const newIdx =
+							textareaRef.current.value.slice(0, sel2).split("\n").length - 1;
+						setFocusedLine(newIdx);
+						setControlsTick((t) => t + 1);
+					}
+				}, 0);
+				return;
+			}
+		}
+
 		setFocusedLine(idx);
 		// We no longer toggle a single focused-line control. Controls for every
 		// non-empty line are rendered; force a rerender so positions update.
@@ -1841,106 +1945,228 @@ export default function Home() {
 											</div>
 										</DropdownMenuContent>
 									</DropdownMenu>
+									<label className="flex items-center gap-2 ml-2">
+										<input
+											type="checkbox"
+											checked={advancedMode}
+											onChange={(e) => setAdvancedMode(e.target.checked)}
+											className="w-4 h-4"
+										/>
+										<span className="text-sm">Advanced</span>
+									</label>
 								</div>
 								<div className="relative flex-1 w-full">
-									<textarea
-										id="names-input"
-										ref={(el) => {
-											textareaRef.current = el;
-										}}
-										value={names}
-										onChange={(e) => handleTextareaChange(e)}
-										// placeholder="Enter names, one per line"
-										rows={10}
-										onClick={updateFocusedLine}
-										onKeyUp={updateFocusedLine}
-										onKeyDown={handleKeyDownInTextarea}
-										onSelect={updateFocusedLine}
-										onScroll={() => setControlsTick((t) => t + 1)}
-										className="w-full whitespace-pre min-h-[400px] rounded-[7px] bg-gray-50 text-gray-800 resize-none text-[18px] md:text-[19px] font-bold border-4 shadow-inner border-gray-300 focus-visible:ring-0 focus-visible:border-blue-300 px-3 pt-3 pb-8 leading-7"
-									/>
+									{!advancedMode ? (
+										<>
+											<textarea
+												id="names-input"
+												ref={(el) => {
+													textareaRef.current = el;
+													measureTextarea(el);
+												}}
+												value={names}
+												onChange={(e) => handleTextareaChange(e)}
+												// placeholder="Enter names, one per line"
+												rows={10}
+												onClick={updateFocusedLine}
+												onKeyUp={updateFocusedLine}
+												onKeyDown={handleKeyDownInTextarea}
+												onSelect={updateFocusedLine}
+												onScroll={() => setControlsTick((t) => t + 1)}
+												className="w-full whitespace-pre min-h-[400px] rounded-[7px] bg-gray-50 text-gray-800 resize-none text-[18px] md:text-[19px] font-bold border-4 shadow-inner border-gray-300 focus-visible:ring-0 focus-visible:border-blue-300 px-3 pt-3 pb-8 leading-7"
+											/>
 
-									{/* Per-line controls and overlays */}
-									{names.split("\n").map((ln, idx) => {
-										const name = ln.trim();
-										if (!name) return null;
-										const isIncluded = includeMap[name] !== false;
-										return (
-											<div key={`line-wrap-${idx}-${controlsTick}`}>
-												{/* Overlay to show the line text with a strike-through when unchecked. Positioned over textarea text. */}
-												{!isIncluded && (
-													<div
-														key={`line-overlay-${idx}-${controlsTick}`}
-														className="absolute left-4 pointer-events-none text-[18px] md:text-[19px] decoration-red-400 font-bold text-gray-400 leading-7 line-through"
-														style={{
-															top: calcIconTop(textareaRef.current, idx) + "px",
-														}}
-													>
-														{name}
+											{/* Per-line controls and overlays */}
+											{names.split("\n").map((ln, idx) => {
+												const name = ln.trim();
+												if (!name) return null;
+												const isIncluded = includeMap[name] !== false;
+												return (
+													<div key={`line-wrap-${idx}-${controlsTick}`}>
+														{/* Overlay to show the line text with a strike-through when unchecked. Positioned over textarea text. */}
+														{!isIncluded && (
+															<div
+																key={`line-overlay-${idx}-${controlsTick}`}
+																className="absolute left-4 pointer-events-none text-[18px] md:text-[19px] decoration-red-400 font-bold text-gray-400 leading-7 line-through"
+																style={{
+																	top:
+																		calcIconTop(textareaRef.current, idx) +
+																		"px",
+																}}
+															>
+																{name}
+															</div>
+														)}
+														<div
+															key={`line-controls-${idx}-${controlsTick}`}
+															className="absolute md:right-5 right-3 flex items-center gap-2"
+															style={{
+																top:
+																	calcIconTop(textareaRef.current, idx) + "px",
+															}}
+														>
+															{/* Checkbox: keep textarea focused by preventing default on mouseDown,
+																but toggle inclusion onClick so the first click takes effect. */}
+															<input
+																type="checkbox"
+																aria-label={`Include ${name} on wheel`}
+																onMouseDown={(e) => e.preventDefault()}
+																checked={isIncluded}
+																onChange={(e) =>
+																	handleToggleInclude(idx, e.target.checked)
+																}
+																className="w-5 h-5 bg-white rounded"
+															/>
+
+															<button
+																type="button"
+																onPointerDown={(e) => {
+																	e.preventDefault();
+																	handleClearLine(idx);
+																}}
+																aria-label={`Clear line ${idx + 1}`}
+																className="w-5 h-5 bg-white/90 rounded shadow-md flex items-center justify-center hover:bg-white p-0"
+															>
+																<X size={18} color="#404040" />
+															</button>
+														</div>
 													</div>
-												)}
-												<div
-													key={`line-controls-${idx}-${controlsTick}`}
-													className="absolute right-3 flex items-center gap-2"
-													style={{
-														top: calcIconTop(textareaRef.current, idx) + "px",
-													}}
+												);
+											})}
+
+											{/* Reset / Undo buttons placed bottom-right inside textarea wrapper (now relative to textarea only) */}
+											<div className="absolute right-2 bottom-2 flex gap-2 p-0.5">
+												<button
+													type="button"
+													onClick={handleReset}
+													className="px-2 py-1 rounded bg-red-500 text-white text-sm hover:bg-red-600 shadow"
 												>
-													{/* Checkbox: keep textarea focused by preventing default on mouseDown,
-													but toggle inclusion onClick so the first click takes effect. */}
-													<input
-														type="checkbox"
-														aria-label={`Include ${name} on wheel`}
-														onMouseDown={(e) => e.preventDefault()}
-														checked={isIncluded}
-														onClick={() =>
-															handleToggleInclude(idx, !isIncluded)
-														}
-														className="w-5 h-5 bg-white rounded"
-													/>
-
-													<button
-														type="button"
-														onPointerDown={(e) => {
-															e.preventDefault();
-															handleClearLine(idx);
-														}}
-														aria-label={`Clear line ${idx + 1}`}
-														className="w-5 h-5 bg-white/90 rounded shadow-md flex items-center justify-center hover:bg-white p-0"
-													>
-														<X size={18} color="#404040" />
-													</button>
-												</div>
+													Reset
+												</button>
+												<button
+													type="button"
+													onClick={handleUndo}
+													disabled={!canUndo}
+													className="px-2 py-1 text-gray-50 rounded bg-[#404040] text-sm hover:bg-gray-300 disabled:opacity-30 disabled:cursor-not-allowed shadow"
+												>
+													Undo
+												</button>
 											</div>
-										);
-									})}
-
-									{/* Reset / Undo buttons placed bottom-right inside textarea wrapper (now relative to textarea only) */}
-									<div className="absolute right-2 bottom-2 flex gap-2 p-0.5">
-										<button
-											type="button"
-											onClick={handleReset}
-											className="px-2 py-1 rounded bg-red-500 text-white text-sm hover:bg-red-600 shadow"
+										</>
+									) : (
+										/* Advanced mode: render same-size interactive div */
+										<div
+											role="region"
+											aria-label="Advanced names editor"
+											className="w-full whitespace-pre rounded-[7px] bg-gray-50 text-gray-800 overflow-auto text-[18px] md:text-[19px] font-bold border-4 shadow-inner border-gray-300 px-3 pt-3 pb-8 leading-7"
+											style={{
+												width: textareaSize.width
+													? textareaSize.width + "px"
+													: undefined,
+												height: textareaSize.height
+													? textareaSize.height + "px"
+													: undefined,
+											}}
 										>
-											Reset
-										</button>
-										<button
-											type="button"
-											onClick={handleUndo}
-											disabled={!canUndo}
-											className="px-2 py-1 text-gray-50 rounded bg-[#404040] text-sm hover:bg-gray-300 disabled:opacity-30 disabled:cursor-not-allowed shadow"
-										>
-											Undo
-										</button>
-									</div>
+											{names.split("\n").map((ln, idx) => {
+												const text = ln;
+												const isIncluded = (text || "").trim()
+													? includeMap[(text || "").trim()] !== false
+													: false;
+												return (
+													<div
+														key={`adv-line-${idx}-${controlsTick}`}
+														className="flex flex-col gap-2 border-b border-gray-200 py-2"
+													>
+														{/* First inner div: mirrors line content and controls */}
+														<div className="flex items-center justify-between">
+															<span
+																className={`truncate ${
+																	!isIncluded
+																		? "line-through decoration-red-400 text-gray-400"
+																		: ""
+																}`}
+															>
+																{(text || "").trim()}
+															</span>
+															<div className="flex items-center gap-2">
+																<input
+																	type="checkbox"
+																	aria-label={`Include ${(
+																		text || ""
+																	).trim()} on wheel`}
+																	onMouseDown={(e) => e.preventDefault()}
+																	checked={isIncluded}
+																	onChange={(e) =>
+																		handleToggleInclude(idx, e.target.checked)
+																	}
+																	className="w-5 h-5 bg-white rounded"
+																/>
+																<button
+																	type="button"
+																	onClick={() => clearLineDirect(idx)}
+																	aria-label={`Clear line ${idx + 1}`}
+																	className="w-6 h-6 bg-white/90 rounded shadow-md flex items-center justify-center hover:bg-white p-0"
+																>
+																	<X size={18} color="#404040" />
+																</button>
+															</div>
+														</div>
+														{/* Second inner div: palette button */}
+														<div>
+															<button
+																type="button"
+																className="flex items-center gap-2 px-3 py-1 rounded bg-white/90 hover:bg-white shadow text-gray-700"
+																onClick={() =>
+																	console.log(
+																		"Open palette for line",
+																		idx,
+																		text
+																	)
+																}
+																aria-label={`Open palette for ${(
+																	text || ""
+																).trim()}`}
+															>
+																<Palette size={16} />
+																<span className="text-xs">Palette</span>
+															</button>
+														</div>
+													</div>
+												);
+											})}
+											{/* Reset / Undo inside advanced container */}
+											<div className="absolute right-2 bottom-2 flex gap-2 p-0.5">
+												<button
+													type="button"
+													onClick={handleReset}
+													className="px-2 py-1 rounded bg-red-500 text-white text-sm hover:bg-red-600 shadow"
+												>
+													Reset
+												</button>
+												<button
+													type="button"
+													onClick={handleUndo}
+													disabled={!canUndo}
+													className="px-2 py-1 text-gray-50 rounded bg-[#404040] text-sm hover:bg-gray-300 disabled:opacity-30 disabled:cursor-not-allowed shadow"
+												>
+													Undo
+												</button>
+											</div>
+										</div>
+									)}
 								</div>
 							</div>
 							<p
 								className="text-sm text-gray-500 mt-2"
 								style={getTextContrastStyles() || undefined}
 							>
-								{namesList.length} {namesList.length === 1 ? "name" : "names"}{" "}
-								entered
+								{/* {namesList.length} {namesList.length === 1 ? "name" : "names"}{" "}
+								entered */}
+								Number of{" "}
+								{namesList.length === 1 ? "Participant" : "Participants"}
+								{" : "}
+								{namesList.length}{" "}
 							</p>
 						</div>
 					</section>
