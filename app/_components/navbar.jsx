@@ -296,6 +296,17 @@ const Navbar = ({
 
 	// ref for programmatically opening the native color picker
 	const colorInputRef = useRef(null);
+
+	const handleOpenColorPicker = useCallback(() => {
+		const el = colorInputRef.current;
+		if (!el) return;
+		try {
+			if (typeof el.showPicker === "function") el.showPicker();
+			else el.click();
+		} catch {
+			// ignore
+		}
+	}, []);
 	// timer/ref used to poll for the color input mounting so we can open picker
 	const colorPickerPollRef = useRef(null);
 
@@ -451,62 +462,26 @@ const Navbar = ({
 					<MenubarContent className="min-w-[230px] max-md:hidden">
 						<MenubarLabel>Customize the stage</MenubarLabel>
 						<MenubarSeparator />
-						<MenubarSub>
-							<MenubarSubTrigger
-								onPointerEnter={() => {
-									// Start polling for the color input to mount, then open picker.
-									if (colorPickerPollRef.current) return;
-									colorPickerPollRef.current = setInterval(() => {
-										const el = colorInputRef.current;
-										if (!el) return;
-										try {
-											if (typeof el.showPicker === "function") {
-												el.showPicker();
-											} else {
-												el.click();
-											}
-										} catch {
-											// ignore
-										}
-										clearInterval(colorPickerPollRef.current);
-										colorPickerPollRef.current = null;
-									}, 60);
-								}}
-								onPointerLeave={() => {
-									if (colorPickerPollRef.current) {
-										clearInterval(colorPickerPollRef.current);
-										colorPickerPollRef.current = null;
-									}
-								}}
-								onClick={() => {
-									// Try immediately on click as a fallback
-									const el = colorInputRef.current;
-									if (!el) return;
-									try {
-										if (typeof el.showPicker === "function") el.showPicker();
-										else el.click();
-									} catch {
-										// ignore
-									}
-								}}
-							>
-								<Palette className="h-4 w-4 mr-2" /> Colors
-							</MenubarSubTrigger>
-							<MenubarSubContent>
-								<div className="p-2 text-sm">
-									<p className="text-muted-foreground text-xs uppercase tracking-wide">
-										PICK A COLOR
-									</p>
-									<input
-										ref={colorInputRef}
-										type="color"
-										className="h-0 w-full cursor-pointer rounded border border-muted"
-										onChange={handleColorChange}
-										aria-label="Select background color"
-									/>
-								</div>
-							</MenubarSubContent>
-						</MenubarSub>
+						{/* hidden color input for desktop — opened programmatically */}
+						<input
+							ref={colorInputRef}
+							type="color"
+							className="sr-only"
+							onChange={handleColorChange}
+							aria-label="Select background color"
+						/>
+						<MenubarItem
+							onPointerDown={(e) => {
+								// Prevent the menubar from closing so the native color picker can remain open
+								e.preventDefault();
+								e.stopPropagation();
+								handleOpenColorPicker();
+							}}
+							onClick={handleOpenColorPicker}
+							className="cursor-pointer text-[13px] w-full md:w-auto"
+						>
+							<Palette className="h-4 w-4 mr-2" /> Colors
+						</MenubarItem>
 						<MenubarSub>
 							<MenubarSubTrigger>
 								<ImageIcon className="h-4 w-4 mr-2" /> Images
@@ -572,6 +547,7 @@ const Navbar = ({
 			handleColorChange,
 			handleImageClick,
 			handleResetBackground,
+			handleOpenColorPicker,
 		]
 	);
 
