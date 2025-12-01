@@ -478,9 +478,9 @@ const Navbar = ({
 								handleOpenColorPicker();
 							}}
 							onClick={handleOpenColorPicker}
-							className="cursor-pointer text-[13px] w-full md:w-auto"
+							className="cursor-pointer text-[13px] w-full font-medium md:w-auto"
 						>
-							<Palette className="h-4 w-4 mr-2" /> Colors
+							<Palette className="h-4 w-4" /> Colors
 						</MenubarItem>
 						<MenubarSub>
 							<MenubarSubTrigger>

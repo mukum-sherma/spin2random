@@ -269,9 +269,27 @@ export default function Home() {
 		return { width: el.clientWidth, height: el.clientHeight };
 	};
 
+	const adjustTextareaHeight = () => {
+		const el = textareaRef.current;
+		if (!el) return;
+		// reset to auto to measure content height
+		el.style.height = "auto";
+		const scrollH = el.scrollHeight;
+		const maxH = 800;
+		if (scrollH <= maxH) {
+			el.style.height = scrollH + "px";
+			el.style.overflowY = "hidden";
+		} else {
+			el.style.height = maxH + "px";
+			el.style.overflowY = "auto";
+		}
+	};
+
 	useLayoutEffect(() => {
 		// measure after DOM mutations; only set state when size actually changes
 		const apply = () => {
+			// ensure textarea height matches contents before measuring
+			adjustTextareaHeight();
 			const s = measureTextarea();
 			if (!s) return;
 			setTextareaSize((prev) => {
@@ -477,6 +495,48 @@ export default function Home() {
 		const name = lines[index] ?? "";
 		if (!name) return;
 		setIncludeMap((prev) => ({ ...prev, [name]: checked }));
+	};
+
+	// Clear a line's text without relying on the textarea element (used in Advanced mode)
+	const clearLineDirect = (index: number) => {
+		setNames((prev) => {
+			const lines = prev.split("\n");
+			const clearedName = (lines[index] || "").trim();
+			lines[index] = "";
+			if (clearedName) {
+				setIncludeMap((prevMap) => {
+					const copy = { ...prevMap };
+					delete copy[clearedName];
+					return copy;
+				});
+			}
+			return lines.join("\n");
+		});
+	};
+
+	// Edit a specific line's text (Advanced mode). Updates names and keeps includeMap in sync.
+	const editLine = (index: number, newText: string) => {
+		setNames((prev) => {
+			const lines = prev.split("\n");
+			const oldTrim = (lines[index] || "").trim();
+			lines[index] = newText;
+			const newTrim = newText.trim();
+
+			// Update includeMap based on the old trimmed name, preserving the flag if present
+			setIncludeMap((prevMap) => {
+				const copy = { ...prevMap };
+				if (oldTrim && copy[oldTrim] !== undefined) {
+					const v = copy[oldTrim];
+					delete copy[oldTrim];
+					if (newTrim) copy[newTrim] = v;
+				} else if (newTrim && copy[newTrim] === undefined) {
+					copy[newTrim] = true;
+				}
+				return copy;
+			});
+
+			return lines.join("\n");
+		});
 	};
 
 	// Initialize Web Audio API for better performance on mobile
@@ -1962,7 +2022,6 @@ export default function Home() {
 												id="names-input"
 												ref={(el) => {
 													textareaRef.current = el;
-													measureTextarea(el);
 												}}
 												value={names}
 												onChange={(e) => handleTextareaChange(e)}
@@ -2066,6 +2125,9 @@ export default function Home() {
 												height: textareaSize.height
 													? textareaSize.height + "px"
 													: undefined,
+												minHeight: "600px",
+												maxHeight: "900px",
+												overflowY: "auto",
 											}}
 										>
 											{names.split("\n").map((ln, idx) => {
@@ -2080,15 +2142,17 @@ export default function Home() {
 													>
 														{/* First inner div: mirrors line content and controls */}
 														<div className="flex items-center justify-between">
-															<span
-																className={`truncate ${
+															<input
+																type="text"
+																value={text || ""}
+																onChange={(e) => editLine(idx, e.target.value)}
+																aria-label={`Edit name for line ${idx + 1}`}
+																className={`flex-1 mr-3 bg-transparent truncate text-[18px] md:text-[19px] font-bold focus:outline-none ${
 																	!isIncluded
 																		? "line-through decoration-red-400 text-gray-400"
 																		: ""
 																}`}
-															>
-																{(text || "").trim()}
-															</span>
+															/>
 															<div className="flex items-center gap-2">
 																<input
 																	type="checkbox"
