@@ -2085,12 +2085,12 @@ export default function Home() {
 												if (!name) return null;
 												const isIncluded = includeMap[name] !== false;
 												return (
-													<div key={`line-wrap-${idx}-${controlsTick}`}>
+													<div key={`line-wrap-${idx}-${controlsTick}` }>
 														{/* Overlay to show the line text with a strike-through when unchecked. Positioned over textarea text. */}
 														{!isIncluded && (
 															<div
 																key={`line-overlay-${idx}-${controlsTick}`}
-																className="absolute left-4 pointer-events-none text-[18px] md:text-[19px] decoration-red-400 font-bold text-gray-400 leading-7 line-through"
+																className="absolute left-4  pointer-events-none text-[18px] md:text-[19px] decoration-red-400 font-bold text-gray-400 leading-7 line-through"
 																style={{
 																	top:
 																		calcIconTop(textareaRef.current, idx) +
@@ -2102,7 +2102,7 @@ export default function Home() {
 														)}
 														<div
 															key={`line-controls-${idx}-${controlsTick}`}
-															className="absolute md:right-5 right-3 flex items-center gap-2"
+															className="absolute md:right-6 right-3 flex items-center gap-2"
 															style={{
 																top:
 																	calcIconTop(textareaRef.current, idx) + "px",
@@ -2161,7 +2161,7 @@ export default function Home() {
 										<div
 											role="region"
 											aria-label="Advanced names editor"
-											className="w-full whitespace-pre rounded-[7px] bg-gray-50 text-gray-800 overflow-auto text-[18px] md:text-[19px] font-bold border-4 shadow-inner border-gray-300 px-3 pt-3 pb-8 leading-7"
+											className="w-full whitespace-pre rounded-[7px] bg-gray-50 text-gray-800 overflow-auto text-[18px] md:text-[19px] font-bold border-4 shadow-inner border-gray-300 px-2 pt-3 pb-8 leading-7"
 											style={{
 												width: textareaSize.width
 													? textareaSize.width + "px"
@@ -2182,10 +2182,16 @@ export default function Home() {
 												return (
 													<div
 														key={`adv-line-${idx}`}
-														className="flex flex-col gap-2 border-b border-gray-200 py-2"
+														className="flex flex-col gap-2 mb-1 py-2 w-full rounded-sm border border-gray-200"
+														style={{
+															backgroundColor:
+																idx % 2 === 0
+																	? "rgba(0,0,0,0.06)"
+																	: "transparent",
+														}}
 													>
 														{/* First inner div: mirrors line content and controls */}
-														<div className="flex items-center justify-between">
+														<div className="flex items-center justify-between w-full relative pl-2">
 															<input
 																type="text"
 																ref={(el) => {
@@ -2201,7 +2207,7 @@ export default function Home() {
 																		: ""
 																}`}
 															/>
-															<div className="flex items-center gap-2">
+															<div className="absolute flex items-center gap-2 right-1">
 																<input
 																	type="checkbox"
 																	aria-label={`Include ${(
