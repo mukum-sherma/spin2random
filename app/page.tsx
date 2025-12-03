@@ -2508,16 +2508,39 @@ export default function Home() {
 											className="w-full whitespace-pre rounded-[7px] bg-gray-50 text-gray-800 overflow-auto text-[18px] md:text-[19px] font-bold border-4 shadow-inner border-gray-300 px-2 pt-3 pb-8 leading-7"
 											onPointerDown={(e) => {
 												if (isEventInsideLine(e)) return;
+												// No rendered lines: reveal the area and force
+												// the first row visible so controls render.
 												if (renderLines.length === 0) {
-													// Reveal the empty advanced area and mark
-													// the first row as forced-visible so the
-													// icon/controls div renders immediately.
 													setHideEmpty(false);
 													setForcedEmpty((prev) => ({ ...prev, 0: true }));
 													e.stopPropagation();
 													return;
 												}
-												insertLineAfter(renderLines.length - 1);
+
+												// If the last rendered line is empty, do not
+												// create another empty row — focus the existing
+												// last input instead to avoid flicker.
+												const lastIdx = renderLines.length - 1;
+												const lastText = renderLines[lastIdx] ?? "";
+												if ((lastText || "").trim() === "") {
+													setHideEmpty(false);
+													// focus the existing last input if available
+													setTimeout(() => {
+														const ref = advancedInputRefs.current[lastIdx];
+														if (ref) {
+															try {
+																ref.focus();
+																const len = ref.value.length;
+																ref.selectionStart = ref.selectionEnd = len;
+															} catch {}
+														}
+													}, 0);
+													e.stopPropagation();
+													return;
+												}
+
+												// Otherwise insert a new empty row after the last one
+												insertLineAfter(lastIdx);
 												e.stopPropagation();
 											}}
 											style={{
