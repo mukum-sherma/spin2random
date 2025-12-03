@@ -1278,7 +1278,9 @@ export default function Home() {
 		const displayList =
 			namesList.length > 0
 				? namesList
-				: ["Add", "Names", "Here", "To", "Start", "Spinning"];
+				: //  : ["Add", "Names", "Here", "To", "Start", "Spinning"];
+				  [""];
+
 		if (!canvas) return;
 
 		const ctx = canvas.getContext("2d", {
