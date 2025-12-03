@@ -508,9 +508,9 @@ const Navbar = ({
 							<MenubarSubTrigger>
 								<ImageIcon className="h-4 w-4 mr-2" /> Images
 							</MenubarSubTrigger>
-							<MenubarSubContent className="w-[80%] md:w-[700px] max-h-[400px] overflow-y-auto">
+							<MenubarSubContent className="max-w-[85%] md:w-[700px] max-h-[400px] overflow-y-auto">
 								<div className="p-3">
-									<div className="flex items-center justify-between">
+									<div className="flex items-center justify-between w-full">
 										<p className="text-muted-foreground text-xs uppercase tracking-wide mb-3">
 											Choose background
 										</p>
@@ -841,11 +841,11 @@ const Navbar = ({
 													</AccordionTrigger>
 													<AccordionContent className="px-2 pb-2">
 														<div className="p-3">
-															<div className="flex items-center justify-between">
+															<div className="flex flex-col items-center justify-between pb-3">
 																<p className="text-muted-foreground text-xs uppercase tracking-wide mb-3">
 																	Choose background
 																</p>
-																<div>
+																<div >
 																	<input
 																		ref={uploadBgInputRef}
 																		type="file"

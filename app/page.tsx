@@ -2288,8 +2288,8 @@ export default function Home() {
 
 										<DropdownMenuContent className="w-[360px] max-h-[320px] overflow-y-auto">
 											<div className="p-3">
-												<div className="flex items-center justify-between ">
-													<p className="text-muted-foreground text-xs uppercase tracking-wide mb-3">
+												<div className="flex items-center justify-between mb-3">
+													<p className="text-muted-foreground text-xs uppercase tracking-wide">
 														Choose wheel image
 													</p>
 													<div>
@@ -2303,7 +2303,7 @@ export default function Home() {
 														<button
 															type="button"
 															onClick={() => uploadInputRef.current?.click()}
-															className="flex mt-[-11px] items-center gap-2 px-3 py-1 text-[13px] font-medium rounded-full text-xs text-white shadow justify-start"
+															className="flex items-center gap-2 px-3 py-1 text-[13px] font-medium rounded-full text-xs text-white shadow justify-start"
 															style={{
 																background: "#008cbd",
 																...(getButtonContrastStyles() || {}),
