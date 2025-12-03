@@ -28,6 +28,7 @@ import {
 	ArrowUp,
 	ArrowDown,
 	LoaderPinwheel,
+	Palette,
 	UploadCloud,
 } from "lucide-react";
 import Image from "next/image";
@@ -74,6 +75,160 @@ export default function Home() {
 		() => dynamic(() => import("react-confetti"), { ssr: false }),
 		[]
 	);
+	// Per-partition custom colors (advanced mode color picker)
+
+	// Palette popover state (which line's palette is open)
+	const [paletteOpenFor, setPaletteOpenFor] = useState<number | null>(null);
+	const paletteRef = useRef<HTMLDivElement | null>(null);
+	const paletteAnchorRef = useRef<HTMLElement | null>(null);
+	const paletteColors = useMemo(
+		() => [
+			"#FF6B6B",
+			"#FF8A80",
+			"#FF5252",
+			"#FF1744",
+			"#D50000",
+			"#FFAB40",
+			"#FFA726",
+			"#FF9800",
+			"#FFB86B",
+			"#FFD54F",
+			"#F7DC6F",
+			"#F0E68C",
+			"#ABEBC6",
+			"#A3E4D7",
+			"#4ECDC4",
+			"#45B7D1",
+			"#5DADE2",
+			"#85C1E2",
+			"#7D3C98",
+			"#BB8FCE",
+			"#F1948A",
+			"#E74C3C",
+			"#A3BE8C",
+			"#2ECC71",
+			"#27AE60",
+			"#16A085",
+			"#34495E",
+			"#95A5A6",
+			"#F1948A",
+			"#F8B88B",
+		],
+		[]
+	);
+
+	const openPaletteFor = useCallback((idx: number, anchor?: HTMLElement) => {
+		paletteAnchorRef.current = anchor ?? null;
+		setPaletteOpenFor(idx);
+	}, []);
+
+	const closePalette = useCallback(() => {
+		setPaletteOpenFor(null);
+		paletteAnchorRef.current = null;
+	}, []);
+
+	const handlePaletteSelect = useCallback(
+		(idx: number, color: string) => {
+			setPartitionColors((prev) => ({ ...prev, [idx]: color }));
+			drawWheelRef.current?.();
+			closePalette();
+		},
+		[closePalette]
+	);
+
+	const handlePaletteReset = useCallback(
+		(idx: number) => {
+			setPartitionColors((prev) => {
+				const copy = { ...prev };
+				delete copy[idx];
+				return copy;
+			});
+			drawWheelRef.current?.();
+			closePalette();
+		},
+		[closePalette]
+	);
+
+	// Close on outside click or Escape
+	useEffect(() => {
+		if (paletteOpenFor === null) return;
+
+		const onDocDown = (ev: MouseEvent) => {
+			const tgt = ev.target as Node | null;
+			if (!tgt) return;
+			if (paletteRef.current && paletteRef.current.contains(tgt)) return;
+			if (paletteAnchorRef.current && paletteAnchorRef.current.contains(tgt))
+				return;
+			closePalette();
+		};
+
+		const onKey = (ev: KeyboardEvent) => {
+			if (ev.key === "Escape") closePalette();
+		};
+
+		document.addEventListener("mousedown", onDocDown);
+		document.addEventListener("keydown", onKey);
+
+		return () => {
+			document.removeEventListener("mousedown", onDocDown);
+			document.removeEventListener("keydown", onKey);
+		};
+	}, [paletteOpenFor, closePalette]);
+
+	// Reposition popover on scroll/resize
+	useEffect(() => {
+		if (paletteOpenFor === null) return;
+		let raf = 0;
+		const update = () => {
+			if (!paletteAnchorRef.current || !paletteRef.current) return;
+			const r = paletteAnchorRef.current.getBoundingClientRect();
+			const pop = paletteRef.current;
+			pop.style.position = "fixed";
+
+			// compute horizontal center anchored to button, then clamp so popover stays inside viewport
+			const popW = pop.offsetWidth || 160;
+			const desiredCenter = Math.round(r.left + r.width / 2);
+			const minCenter = Math.round(popW / 2) + 8;
+			const maxCenter = Math.round(window.innerWidth - popW / 2) - 8;
+			const clampedCenter = Math.max(
+				minCenter,
+				Math.min(maxCenter, desiredCenter)
+			);
+			pop.style.left = `${clampedCenter}px`;
+			// use translate to center horizontally
+			pop.style.transform = "translate(-50%, 0)";
+
+			// position below if space, otherwise above; ensure top is clamped into viewport
+			let top = Math.round(r.bottom + 8);
+			if (top + pop.offsetHeight > window.innerHeight - 8) {
+				// try above
+				top = Math.round(r.top - pop.offsetHeight - 8);
+			}
+			// final clamp
+			top = Math.max(
+				8,
+				Math.min(top, Math.max(8, window.innerHeight - pop.offsetHeight - 8))
+			);
+			pop.style.top = `${top}px`;
+			// make visible after positioning
+			pop.style.opacity = "1";
+		};
+
+		const tick = () => {
+			update();
+			raf = requestAnimationFrame(tick);
+		};
+
+		window.addEventListener("resize", update);
+		window.addEventListener("scroll", update, true);
+		tick();
+
+		return () => {
+			cancelAnimationFrame(raf);
+			window.removeEventListener("resize", update);
+			window.removeEventListener("scroll", update, true);
+		};
+	}, [paletteOpenFor]);
 	const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
 	const [showConfetti, setShowConfetti] = useState(false);
 	const [nameOrder, setNameOrder] = useState<NameOrder>("shuffle");
@@ -2042,6 +2197,41 @@ export default function Home() {
 					className="pointer-events-none w-full h-full fixed z-99999"
 				/>
 			) : null}
+			{/* Palette popover (anchored) */}
+			{paletteOpenFor !== null && (
+				<div
+					ref={paletteRef}
+					className="z-50 p-2 bg-white rounded shadow-lg border"
+					style={{
+						position: "fixed",
+						left: "50%",
+						top: "50%",
+						transform: "translate(-50%, 0)",
+					}}
+				>
+					<div className="grid grid-cols-5 gap-2">
+						{paletteColors.map((c) => (
+							<button
+								type="button"
+								key={c}
+								aria-label={`Select color ${c}`}
+								className="w-6 h-6 rounded-sm"
+								style={{ background: c, border: "1px solid rgba(0,0,0,0.08)" }}
+								onClick={() => handlePaletteSelect(paletteOpenFor as number, c)}
+							/>
+						))}
+					</div>
+					<div className="mt-2 flex gap-2 justify-center">
+						<button
+							type="button"
+							className="px-2 py-1 text-sm rounded bg-gray-100 hover:bg-gray-200 border"
+							onClick={() => handlePaletteReset(paletteOpenFor as number)}
+						>
+							Reset
+						</button>
+					</div>
+				</div>
+			)}
 			<style jsx>{`
 				@media (min-width: 768px) {
 					#wheel:fullscreen {
@@ -2196,6 +2386,7 @@ export default function Home() {
 										>
 											<X size={20} />
 										</button>
+										{/* Palette button intentionally not shown in title area */}
 									</div>
 								) : (
 									<div
@@ -2775,6 +2966,11 @@ export default function Home() {
 												const isIncluded = (text || "").trim()
 													? includeMap[(text || "").trim()] !== false
 													: false;
+												// Palette button color: per-partition override or default palette
+												const paletteBtnColor =
+													partitionColors[idx] ?? colors[idx % colors.length];
+												const paletteBtnTextColor =
+													computeContrastFromColor(paletteBtnColor);
 												return (
 													<div
 														key={`adv-line-${idx}`}
@@ -2875,29 +3071,26 @@ export default function Home() {
 														<div>
 															<button
 																type="button"
-																className="flex items-center gap-2 px-3 py-1 rounded bg-white/90 hover:bg-white shadow text-gray-700"
+																className="flex items-center gap-2 px-3 py-1 rounded shadow"
+																style={{
+																	background: paletteBtnColor,
+																	color: paletteBtnTextColor,
+																}}
 																onClick={(e) => {
 																	e.preventDefault();
 																	e.stopPropagation();
-																	const btn = e.currentTarget as HTMLElement;
-																	const lineEl = btn.closest(
-																		"[data-line-index]"
-																	) as HTMLElement | null;
-																	// Anchor to the color button itself (the element that was clicked)
-																	openColorPickerFor(idx, btn);
+																	openPaletteFor(
+																		idx,
+																		e.currentTarget as HTMLElement
+																	);
 																}}
-																aria-label={`Open color for ${(
+																aria-label={`Open palette for ${(
 																	text || ""
 																).trim()}`}
 															>
-																<span
-																	className="w-3 h-3 rounded border"
-																	style={{
-																		background:
-																			partitionColors[idx] ||
-																			colors[idx % colors.length],
-																		display: "inline-block",
-																	}}
+																<Palette
+																	size={16}
+																	color={paletteBtnTextColor}
 																/>
 																<span className="text-xs">Color</span>
 															</button>
