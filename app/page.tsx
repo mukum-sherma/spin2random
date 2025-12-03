@@ -2364,6 +2364,7 @@ export default function Home() {
 													minHeight: "500px",
 													maxHeight: "900px",
 													overflowY: "auto",
+													paddingBottom: "50px",
 												}}
 											>
 												{renderLines.map((ln, idx) => {
@@ -2553,6 +2554,7 @@ export default function Home() {
 												minHeight: "600px",
 												maxHeight: "900px",
 												overflowY: "auto",
+												paddingBottom: "100px",
 											}}
 										>
 											{renderLines.map((ln, idx) => {
@@ -2679,6 +2681,17 @@ export default function Home() {
 													</div>
 												);
 											})}
+											{/* Tap to Add label below the list — show when there are no rows or when last line is non-empty */}
+											{(renderLines.length === 0 ||
+												(renderLines.length > 0 &&
+													(renderLines[renderLines.length - 1] || "").trim() !==
+														"")) && (
+												<div className="mt-4">
+													<div className="text-gray-400 text-[30px] flex justify-center tracking-tight p-5 items-center opacity-50 select-none">
+														Tap to Add
+													</div>
+												</div>
+											)}
 											{/* Reset / Undo inside advanced container */}
 											<div className="absolute right-0 bottom-0 flex gap-2 px-4.5 py-2">
 												<button
