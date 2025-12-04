@@ -1599,6 +1599,19 @@ export default function Home() {
 			const pImg = partitionImageBitmapRefs.current[index];
 			if (pImg) {
 				ctx.save();
+				// Ensure the partition background color is painted under the image
+				// so uploaded images do not make the partition appear transparent.
+				try {
+					ctx.beginPath();
+					ctx.moveTo(centerX, centerY);
+					ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+					ctx.closePath();
+					ctx.fillStyle =
+						partitionColors[index] ?? colors[index % colors.length];
+					ctx.fill();
+				} catch (fillErr) {
+					// ignore fill failures
+				}
 				ctx.clip();
 				try {
 					// place image centered along the sector radius (center of the partition)
