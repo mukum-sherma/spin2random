@@ -1638,6 +1638,34 @@ export default function Home() {
 						// as the text (0° relative to the text), then draw centered.
 						ctx.translate(centerX + xPos, centerY + yPos);
 						ctx.rotate(midAngle);
+
+						// Clip into a rounded rectangle so the image has a soft
+						// rounded border. Radius fixed at 7px as requested.
+						try {
+							const rr = 7; // corner radius in pixels
+							const x0 = -dw / 2;
+							const y0 = -dh / 2;
+							const w = dw;
+							const h = dh;
+							const rx = Math.min(rr, w / 2);
+							const ry = Math.min(rr, h / 2);
+							ctx.beginPath();
+							ctx.moveTo(x0 + rx, y0);
+							ctx.lineTo(x0 + w - rx, y0);
+							ctx.quadraticCurveTo(x0 + w, y0, x0 + w, y0 + ry);
+							ctx.lineTo(x0 + w, y0 + h - ry);
+							ctx.quadraticCurveTo(x0 + w, y0 + h, x0 + w - rx, y0 + h);
+							ctx.lineTo(x0 + rx, y0 + h);
+							ctx.quadraticCurveTo(x0, y0 + h, x0, y0 + h - ry);
+							ctx.lineTo(x0, y0 + ry);
+							ctx.quadraticCurveTo(x0, y0, x0 + rx, y0);
+							ctx.closePath();
+							ctx.clip();
+						} catch (err) {
+							// if rounded clip fails for any reason, fallback to drawing normally
+							console.warn("Rounded clip failed:", err);
+						}
+
 						ctx.drawImage(pImg, -dw / 2, -dh / 2, dw, dh);
 					} finally {
 						ctx.restore();
