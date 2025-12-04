@@ -1224,6 +1224,9 @@ export default function Home() {
 	const partitionImageBitmapRefs = useRef<Record<number, ImageBitmap | null>>(
 		{}
 	);
+	// Cache simple contrast ("#ffffff" or "#000000") per-partition image to
+	// decide text stroke/shadow color when drawing text over a partition image.
+	const partitionImageContrastRef = useRef<Record<number, string>>({});
 	const partitionImageBlobUrlsRef = useRef<Record<number, string | null>>({});
 
 	// Hidden file input for per-partition image selection
@@ -1603,11 +1606,18 @@ export default function Home() {
 					const midAngle = startAngle + anglePerSegment / 2;
 					const iw = pImg.width;
 					const ih = pImg.height;
-					const maxW = radius * 0.4;
-					const maxH = radius * 0.4;
+					// Adjust max allowed image size by partition angular size so
+					// larger partitions get proportionally larger images.
+					const angleDeg = (anglePerSegment * 180) / Math.PI;
+					// scale factor: small slices -> 0.7, large slices -> up to 1.4
+					const sizeFactor = Math.min(1.4, Math.max(0.7, angleDeg / 30));
+					const baseMax = radius * 0.4;
+					const maxW = baseMax * sizeFactor;
+					const maxH = baseMax * sizeFactor;
 					const scale = Math.min(1, maxW / iw, maxH / ih);
-					const dw = Math.max(8, Math.round(iw * scale));
-					const dh = Math.max(8, Math.round(ih * scale));
+					// ensure a reasonable minimum pixel size so images remain legible
+					const dw = Math.max(12, Math.round(iw * scale));
+					const dh = Math.max(12, Math.round(ih * scale));
 					// compute half-diagonal radius of scaled image
 					const imgRadius = Math.hypot(dw / 2, dh / 2);
 					// maximum center distance so image stays inside wheel (small margin)
@@ -1712,9 +1722,30 @@ export default function Home() {
 			ctx.translate(centerX, centerY);
 			ctx.rotate(startAngle + anglePerSegment / 2);
 			ctx.textAlign = "center";
-			// ctx.fillStyle = "#000";
-			ctx.fillStyle =
+			// Determine the final text color for this partition. Use the global
+			// `wheelTextColor` by default, but if a per-partition image exists,
+			// prefer the cached per-partition contrast (black/white). If the
+			// cached contrast is missing, compute it synchronously from the
+			// ImageBitmap so the text color updates immediately.
+			let finalTextColor =
 				namesList.length === 0 ? "rgba(0, 0, 0, 0.4)" : wheelTextColor;
+			if (partitionImageBitmapRefs.current[index]) {
+				finalTextColor =
+					partitionImageContrastRef.current[index] || finalTextColor;
+				if (!partitionImageContrastRef.current[index]) {
+					try {
+						finalTextColor =
+							computeContrastFromBitmap(
+								partitionImageBitmapRefs.current[index] as ImageBitmap
+							) || finalTextColor;
+						// cache it for subsequent draws
+						partitionImageContrastRef.current[index] = finalTextColor;
+					} catch (e) {
+						// ignore - keep default
+					}
+				}
+			}
+			ctx.fillStyle = finalTextColor;
 
 			// Calculate base font size based on canvas size (responsive)
 			const baseFontSize = Math.max(12, Math.round(radius / 20));
@@ -1755,13 +1786,25 @@ export default function Home() {
 				displayText += "...";
 			}
 
-			// If a wheel image is present, draw a subtle contrasting stroke and
-			// shadow behind the text to ensure legibility against the image.
-			if (wheelImageBitmapRef.current) {
-				// Choose stroke color opposite to the text color for contrast
+			// If a wheel image or a per-partition image is present under this
+			// text, draw a subtle contrasting stroke and shadow to ensure
+			// legibility against the image.
+			const hasImageUnderText =
+				!!wheelImageBitmapRef.current ||
+				!!partitionImageBitmapRefs.current[index];
+			if (hasImageUnderText) {
+				// Prefer contrast computed for wheel image; fall back to cached
+				// per-partition contrast if present.
+				const contrastColor = wheelImageBitmapRef.current
+					? wheelTextColor
+					: partitionImageContrastRef.current[index] ||
+					  wheelTextColor ||
+					  "#000000";
+
 				const isTextWhite =
-					(wheelTextColor || "").toLowerCase() === "#ffffff" ||
-					(wheelTextColor || "").toLowerCase() === "#fff";
+					(contrastColor || "").toLowerCase() === "#ffffff" ||
+					(contrastColor || "").toLowerCase() === "#fff";
+
 				const strokeColor = isTextWhite
 					? "rgba(0,0,0,0.65)"
 					: "rgba(255,255,255,0.9)";
@@ -2005,6 +2048,13 @@ export default function Home() {
 					const bmp = await createImageBitmap(blob);
 					if (!mounted) break;
 					partitionImageBitmapRefs.current[idx] = bmp;
+					// compute and cache a simple contrast (black/white) for this partition
+					try {
+						partitionImageContrastRef.current[idx] =
+							computeContrastFromBitmap(bmp) || "#000000";
+					} catch (err) {
+						partitionImageContrastRef.current[idx] = "#000000";
+					}
 					drawWheelRef.current?.();
 				} catch (err) {
 					console.warn("Failed to load partition image", src, err);
