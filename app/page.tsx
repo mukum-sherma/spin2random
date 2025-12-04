@@ -1598,19 +1598,50 @@ export default function Home() {
 				ctx.save();
 				ctx.clip();
 				try {
-					// place image centered along the sector radius (below the name text)
+					// place image centered along the sector radius (center of the partition)
+					// Always scale-down the image so it fits comfortably inside the wheel
 					const midAngle = startAngle + anglePerSegment / 2;
-					const maxW = radius * 0.6;
-					const maxH = radius * 0.6;
 					const iw = pImg.width;
 					const ih = pImg.height;
-					const scale = Math.min(maxW / iw, maxH / ih, 1);
-					const dw = iw * scale;
-					const dh = ih * scale;
-					const imgCenterDist = radius * 0.78; // place toward outer area under the text
+					const maxW = radius * 0.4;
+					const maxH = radius * 0.4;
+					const scale = Math.min(1, maxW / iw, maxH / ih);
+					const dw = Math.max(8, Math.round(iw * scale));
+					const dh = Math.max(8, Math.round(ih * scale));
+					// compute half-diagonal radius of scaled image
+					const imgRadius = Math.hypot(dw / 2, dh / 2);
+					// maximum center distance so image stays inside wheel (small margin)
+					const maxCenterDist = Math.max(0, radius - imgRadius - 6);
+					// preferred placement slightly outward so image doesn't crowd the center
+					// move image a bit closer to the wheel edge
+					const preferredDist = radius * 0.68;
+					const imgCenterDist = Math.min(preferredDist, maxCenterDist);
 					const cx = centerX + Math.cos(midAngle) * imgCenterDist - dw / 2;
 					const cy = centerY + Math.sin(midAngle) * imgCenterDist - dh / 2;
-					ctx.drawImage(pImg, cx, cy, dw, dh);
+					// Draw image rotated so it remains perpendicular to the text.
+					// We translate to the computed partition center and rotate by
+					// (midAngle + 90deg) so the image stays perpendicular to text.
+					ctx.save();
+					try {
+						// re-create/ensure the sector clip so image stays within the wedge
+						ctx.beginPath();
+						ctx.moveTo(centerX, centerY);
+						ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+						ctx.closePath();
+						ctx.clip();
+
+						// position relative to center
+						const xPos = Math.cos(midAngle) * imgCenterDist;
+						const yPos = Math.sin(midAngle) * imgCenterDist;
+
+						// move to image center, rotate so image has same orientation
+						// as the text (0° relative to the text), then draw centered.
+						ctx.translate(centerX + xPos, centerY + yPos);
+						ctx.rotate(midAngle);
+						ctx.drawImage(pImg, -dw / 2, -dh / 2, dw, dh);
+					} finally {
+						ctx.restore();
+					}
 				} catch (e) {
 					console.warn("Failed to draw partition image:", e);
 				}
@@ -3200,7 +3231,7 @@ export default function Home() {
 																	text || ""
 																).trim()}`}
 															>
-																<ImageIcon size={16} className=""/>
+																<ImageIcon size={16} className="" />
 																<span className="text-xs">Image</span>
 															</button>
 														</div>
