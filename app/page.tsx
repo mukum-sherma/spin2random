@@ -858,12 +858,49 @@ export default function Home() {
 		}, 0);
 	};
 
+	// Insert an empty line before the given index and focus the new input.
+	const insertLineBefore = (index: number) => {
+		setNames((prev) => {
+			const lines = prev.split("\n");
+			lines.splice(index, 0, "");
+			const next = lines.join("\n");
+			pushHistory(next);
+			return next;
+		});
+
+		setTimeout(() => {
+			const newIndex = index;
+			const ref = advancedMode
+				? advancedInputRefs.current[newIndex]
+				: listInputRefs.current[newIndex];
+			if (ref) {
+				try {
+					ref.focus();
+					ref.selectionStart = ref.selectionEnd = 0;
+				} catch {}
+			}
+			updateFocusedLine();
+			setControlsTick((t) => t + 1);
+		}, 0);
+	};
+
 	const handleKeyDownInsert = (
 		e: React.KeyboardEvent<HTMLInputElement>,
 		index: number
 	) => {
 		if (e.key === "Enter" && !e.shiftKey) {
 			e.preventDefault();
+			// If not in Advanced mode and caret is at start, insert above current line
+			if (!advancedMode) {
+				try {
+					const caret =
+						(e.currentTarget as HTMLInputElement).selectionStart ?? 0;
+					if (caret === 0) {
+						insertLineBefore(index);
+						return;
+					}
+				} catch {}
+			}
 			insertLineAfter(index);
 		}
 	};
