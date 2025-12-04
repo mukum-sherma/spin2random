@@ -30,6 +30,7 @@ import {
 	LoaderPinwheel,
 	Palette,
 	UploadCloud,
+	Grip,
 	Image as ImageIcon,
 	Percent,
 } from "lucide-react";
@@ -523,6 +524,10 @@ export default function Home() {
 	const advancedInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
 	// refs for names-list per-line inputs (non-advanced mode)
 	const listInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+
+	// Drag-and-drop: track the index being dragged and highlight drop target
+	const dragIndexRef = useRef<number | null>(null);
+	const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 	// simple undo history for textarea content
 	const historyRef = useRef<string[]>([names]);
 	const historyIndexRef = useRef<number>(0);
@@ -4013,12 +4018,46 @@ export default function Home() {
 													<div
 														key={`adv-line-${idx}`}
 														data-line-index={idx}
-														className="flex flex-col gap-2 mb-1 py-2 w-full rounded-sm border border-gray-200"
+														className="flex flex-col gap-2 mb-1 py-2 w-full rounded-sm border"
 														style={{
 															backgroundColor:
 																idx % 2 === 0
-																	? "rgba(0,0,0,0.03)"
+																	? "rgba(0,0,0,0.05)"
 																	: "transparent",
+															borderColor:
+																dragOverIndex === idx ? "#0671ff" : "#e5e7eb",
+															borderWidth: dragOverIndex === idx ? 2 : 1,
+														}}
+														onDragOver={(e) => {
+															e.preventDefault();
+															setDragOverIndex(idx);
+															try {
+																if (e.dataTransfer)
+																	e.dataTransfer.dropEffect = "move";
+															} catch {}
+														}}
+														onDragLeave={() => setDragOverIndex(null)}
+														onDrop={(e) => {
+															e.preventDefault();
+															const from = dragIndexRef.current;
+															if (from == null) {
+																setDragOverIndex(null);
+																return;
+															}
+															const to = idx;
+															if (from !== to) {
+																const linesArr = names.split("\n");
+																const item = linesArr.splice(from, 1)[0] ?? "";
+																linesArr.splice(to, 0, item);
+																const next = linesArr.join("\n");
+																pushHistory(next);
+																setNames(next);
+																setTimeout(() => {
+																	setControlsTick((t) => t + 1);
+																}, 0);
+															}
+															dragIndexRef.current = null;
+															setDragOverIndex(null);
 														}}
 													>
 														{/* First inner div: input + checkbox + clear */}
@@ -4107,6 +4146,35 @@ export default function Home() {
 														</div>
 														{/* Second inner div: palette button */}
 														<div className="flex gap-3 flex-wrap">
+															{/* Drag handle (grip) - acts as the draggable handle for reordering rows */}
+															<button
+																type="button"
+																draggable
+																onDragStart={(e) => {
+																	e.stopPropagation();
+																	dragIndexRef.current = idx;
+																	try {
+																		if (e.dataTransfer) {
+																			e.dataTransfer.setData(
+																				"text/plain",
+																				String(idx)
+																			);
+																			e.dataTransfer.effectAllowed = "move";
+																		}
+																	} catch {}
+																}}
+																onDragEnd={() => {
+																	dragIndexRef.current = null;
+																	setDragOverIndex(null);
+																}}
+																onPointerDown={(e) => e.stopPropagation()}
+																aria-label={`Drag ${(
+																	(text || "") as string
+																).trim()}`}
+																className="flex items-center gap-2 px-3 py-1 rounded shadow bg-blue-200"
+															>
+																<Grip size={16} />
+															</button>
 															<button
 																type="button"
 																className="flex items-center gap-2 px-3 py-1 rounded shadow"
