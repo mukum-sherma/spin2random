@@ -30,6 +30,7 @@ import {
 	LoaderPinwheel,
 	Palette,
 	UploadCloud,
+	Image as ImageIcon,
 	Percent,
 } from "lucide-react";
 import Image from "next/image";
@@ -260,6 +261,9 @@ export default function Home() {
 	const sliderRef = useRef<HTMLDivElement | null>(null);
 	const sliderAnchorRef = useRef<HTMLElement | null>(null);
 
+	// Text input for weight popover (string so user can type freely)
+	const [sliderWeightText, setSliderWeightText] = useState<string>("");
+
 	// Slider popover: close on outside click / Escape
 	useEffect(() => {
 		if (sliderOpenFor === null) return;
@@ -284,6 +288,23 @@ export default function Home() {
 			document.removeEventListener("mousedown", onDocDown);
 			document.removeEventListener("keydown", onKey);
 		};
+	}, [sliderOpenFor]);
+
+	// Keep the weight text input synced when a popover opens so the user sees
+	// the current numeric weight and can type freely.
+	useEffect(() => {
+		if (sliderOpenFor === null) {
+			setSliderWeightText("");
+			return;
+		}
+		const idx = sliderOpenFor as number;
+		const id = lineIdsRef.current?.[idx];
+		const current = id
+			? partitionWeightsByIdRef.current[id] ??
+			  partitionWeightsRef.current[idx] ??
+			  1
+			: partitionWeightsRef.current[idx] ?? 1;
+		setSliderWeightText(String(current));
 	}, [sliderOpenFor]);
 
 	// Reposition slider popover on scroll/resize when open
@@ -3374,14 +3395,25 @@ export default function Home() {
 										  1
 										: partitionWeightsRef.current[idx] ?? 1;
 									return (
-										<div className="w-[260px]">
-											<div className="text-sm font-medium mb-2">
-												Adjust weight (0–500)
-											</div>
+										<div className="w-[260px] rounded-md">
+											{(() => {
+												const pct =
+													totalWeightForRender > 0
+														? Math.round((current / totalWeightForRender) * 100)
+														: 0;
+												return (
+													<div className="text-sm font-medium mb-2 flex items-center justify-between">
+														<div>Adjust weight ( 0–200 )</div>
+														<div className="text-sm text-gray-600">
+															( {pct}% win )
+														</div>
+													</div>
+												);
+											})()}
 											<input
 												type="range"
 												min={0}
-												max={500}
+												max={200}
 												value={current}
 												onChange={(e) => {
 													const val = Number(
@@ -3403,6 +3435,8 @@ export default function Home() {
 														};
 														delete partitionWeightsRef.current[idx];
 														setPartitionWeights((prev) => {
+															// keep text input in sync with slider
+															setSliderWeightText(String(val));
 															const copy = { ...prev };
 															delete copy[idx];
 															return copy;
@@ -3422,18 +3456,110 @@ export default function Home() {
 												}}
 												className="w-full"
 											/>
-											<div className="mt-2 text-sm">Value: {current}</div>
-											<div className="mt-3 flex justify-end">
-												<button
-													type="button"
-													className="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-sm"
-													onClick={() => {
-														setSliderOpenFor(null);
-														sliderAnchorRef.current = null;
-													}}
-												>
-													Done
-												</button>
+											<div className="mt-1 flex justify-between items-center">
+												<div className="mt-2 text-sm">
+													<label className="mr-2">Weight:</label>
+													<input
+														type="text"
+														value={sliderWeightText}
+														onChange={(e) => {
+															const raw =
+																(e.target as HTMLInputElement).value || "";
+															// allow only digits while typing
+															const filtered = raw.replace(/[^0-9]/g, "");
+															setSliderWeightText(filtered);
+															// parse numeric and update slider live
+															let val = Number(filtered || "0");
+															if (isNaN(val)) val = 0;
+															val = Math.max(0, Math.min(200, Math.round(val)));
+															if (id) {
+																partitionWeightsByIdRef.current = {
+																	...partitionWeightsByIdRef.current,
+																	[id]: val,
+																};
+																setPartitionWeightsById((prev) => ({
+																	...prev,
+																	[id]: val,
+																}));
+																partitionWeightsRef.current = {
+																	...partitionWeightsRef.current,
+																};
+																delete partitionWeightsRef.current[idx];
+																setPartitionWeights((prev) => {
+																	const copy = { ...prev };
+																	delete copy[idx];
+																	return copy;
+																});
+															} else {
+																partitionWeightsRef.current = {
+																	...partitionWeightsRef.current,
+																	[idx]: val,
+																};
+																setPartitionWeights((prev) => ({
+																	...prev,
+																	[idx]: val,
+																}));
+															}
+															drawWheelRef.current?.();
+														}}
+														onBlur={() => {
+															let val = Number(sliderWeightText || "0");
+															if (isNaN(val)) val = 0;
+															val = Math.max(0, Math.min(200, Math.round(val)));
+															if (id) {
+																partitionWeightsByIdRef.current = {
+																	...partitionWeightsByIdRef.current,
+																	[id]: val,
+																};
+																setPartitionWeightsById((prev) => ({
+																	...prev,
+																	[id]: val,
+																}));
+																partitionWeightsRef.current = {
+																	...partitionWeightsRef.current,
+																};
+																delete partitionWeightsRef.current[idx];
+																setPartitionWeights((prev) => {
+																	const copy = { ...prev };
+																	delete copy[idx];
+																	return copy;
+																});
+															} else {
+																partitionWeightsRef.current = {
+																	...partitionWeightsRef.current,
+																	[idx]: val,
+																};
+																setPartitionWeights((prev) => ({
+																	...prev,
+																	[idx]: val,
+																}));
+															}
+															// reflect normalized value back into the text input
+															setSliderWeightText(String(val));
+															drawWheelRef.current?.();
+														}}
+														onKeyDown={(e) => {
+															if (e.key === "Enter") {
+																e.preventDefault();
+																// commit value on Enter
+																(e.target as HTMLInputElement).blur();
+															}
+														}}
+														className="w-20 px-2 py-1 border rounded text-sm"
+													/>
+												</div>
+												<div className="mt-2">
+													<button
+														type="button"
+														className="px-2 py-1 text-white font-medium rounded bg-[#0671ff] hover:bg-blue-800 text-sm"
+														onClick={() => {
+															setSliderOpenFor(null);
+															sliderAnchorRef.current = null;
+														}}
+													>
+														Done
+													</button>
+												</div>
 											</div>
 										</div>
 									);
@@ -3463,7 +3589,7 @@ export default function Home() {
 										role="radio"
 										aria-checked={nameOrder === "shuffle"}
 										onClick={() => handleNamesOrderChange("shuffle")}
-										className="flex items-center gap-2 px-2 py-1 rounded-full text-sm text-white shadow justify-start"
+										className="flex items-center gap-2 px-2 py-1 rounded-sm text-sm text-white shadow justify-start"
 										style={{
 											background: "#008cbd",
 											...(getButtonContrastStyles() || {}),
@@ -3479,7 +3605,7 @@ export default function Home() {
 										role="radio"
 										aria-checked={nameOrder === "ascending"}
 										onClick={() => handleNamesOrderChange("ascending")}
-										className="flex items-center gap-2 px-2 py-1 rounded-full text-sm text-white shadow justify-start"
+										className="flex items-center gap-2 px-2 py-1 rounded-sm text-sm text-white shadow justify-start"
 										style={{
 											background: "#008cbd",
 											...(getButtonContrastStyles() || {}),
@@ -3494,7 +3620,7 @@ export default function Home() {
 										role="radio"
 										aria-checked={nameOrder === "descending"}
 										onClick={() => handleNamesOrderChange("descending")}
-										className="flex items-center gap-2 px-2 py-1 rounded-full text-sm text-white shadow justify-start"
+										className="flex items-center gap-2 px-2 py-1 rounded-sm text-sm text-white shadow justify-start"
 										style={{
 											background: "#008cbd",
 											...(getButtonContrastStyles() || {}),
@@ -3510,7 +3636,7 @@ export default function Home() {
 												type="button"
 												role="button"
 												aria-label="Image"
-												className="flex items-center gap-2 px-2 py-1 rounded-full text-sm text-white shadow justify-start"
+												className="flex items-center gap-2 px-2 py-1 rounded-sm text-sm text-white shadow justify-start"
 												style={{
 													background: "#008cbd",
 													...(getButtonContrastStyles() || {}),
@@ -4020,7 +4146,7 @@ export default function Home() {
 																	text || ""
 																).trim()}`}
 															>
-																<UploadCloud size={16} />
+																<ImageIcon size={16} />
 																{/* <span className="text-xs">Image</span> */}
 															</button>
 
@@ -4039,9 +4165,9 @@ export default function Home() {
 																aria-label={`Share ${(text || "").trim()}`}
 															>
 																<span className="text-sm font-semibold">
-																	{percent}%
+																	{percent} %
 																</span>
-																<Percent size={16} />
+																{/* <Percent size={16} /> */}
 																<span className="text-xs">Win</span>
 															</button>
 														</div>
