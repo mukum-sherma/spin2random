@@ -4186,78 +4186,86 @@ export default function Home() {
 															</div>
 														</div>
 														{/* Second inner div: palette button */}
-														<div className="flex gap-3 flex-wrap">
-															{/* Drag handle (grip) - acts as the draggable handle for reordering rows */}
-															<button
-																type="button"
-																draggable
-																onDragStart={(e) => {
-																	e.stopPropagation();
-																	dragIndexRef.current = idx;
-																	try {
-																		if (e.dataTransfer) {
-																			e.dataTransfer.setData(
-																				"text/plain",
-																				String(idx)
-																			);
-																			e.dataTransfer.effectAllowed = "move";
-																		}
-																	} catch {}
-																}}
-																onDragEnd={() => {
-																	dragIndexRef.current = null;
-																	setDragOverIndex(null);
-																}}
-																onPointerDown={(e) => e.stopPropagation()}
-																aria-label={`Drag ${(
-																	(text || "") as string
-																).trim()}`}
-																className="flex items-center gap-2 px-3 py-1 rounded shadow bg-blue-200"
-															>
-																<Grip size={16} />
-															</button>
-															<button
-																type="button"
-																className="flex items-center gap-2 px-3 py-1 rounded shadow"
-																style={{
-																	background: paletteBtnColor,
-																	color: paletteBtnTextColor,
-																}}
-																onClick={(e) => {
-																	e.preventDefault();
-																	e.stopPropagation();
-																	openPaletteFor(
-																		idx,
-																		e.currentTarget as HTMLElement
-																	);
-																}}
-																aria-label={`Open palette for ${(
-																	text || ""
-																).trim()}`}
-															>
-																<Palette
-																	size={16}
-																	color={paletteBtnTextColor}
-																/>
-																{/* <span className="text-xs">Color</span> */}
-															</button>
+														<div className="flex gap-3 flex-wrap justify-between">
+															<div className="flex items-center gap-2">
+																{/* Drag handle (grip) - acts as the draggable handle for reordering rows */}
+																<button
+																	type="button"
+																	draggable
+																	onDragStart={(e) => {
+																		e.stopPropagation();
+																		dragIndexRef.current = idx;
+																		try {
+																			if (e.dataTransfer) {
+																				e.dataTransfer.setData(
+																					"text/plain",
+																					String(idx)
+																				);
+																				e.dataTransfer.effectAllowed = "move";
+																			}
+																		} catch {}
+																	}}
+																	onDragEnd={() => {
+																		dragIndexRef.current = null;
+																		setDragOverIndex(null);
+																	}}
+																	onPointerDown={(e) => e.stopPropagation()}
+																	aria-label={`Drag ${(
+																		(text || "") as string
+																	).trim()}`}
+																	className="flex items-center gap-2 px-3 py-1 rounded shadow bg-blue-200"
+																>
+																	<Grip size={16} />
+																</button>
+																<button
+																	type="button"
+																	className="flex items-center gap-2 px-3 py-1 rounded shadow"
+																	style={{
+																		background: paletteBtnColor,
+																		color: paletteBtnTextColor,
+																	}}
+																	onClick={(e) => {
+																		e.preventDefault();
+																		e.stopPropagation();
+																		openPaletteFor(
+																			idx,
+																			e.currentTarget as HTMLElement
+																		);
+																	}}
+																	aria-label={`Open palette for ${(
+																		text || ""
+																	).trim()}`}
+																>
+																	<Palette
+																		size={16}
+																		color={paletteBtnTextColor}
+																	/>
+																	{/* <span className="text-xs">Color</span> */}
+																</button>
 
-															<button
-																type="button"
-																className="flex items-center gap-2 px-3 py-1 rounded shadow bg-blue-200"
-																onClick={(e) => {
-																	e.preventDefault();
-																	e.stopPropagation();
-																	pendingPartitionIndexForFileRef.current = idx;
-																	entryFileInputRef.current?.click();
-																}}
-																aria-label={`Select image for ${(
-																	text || ""
-																).trim()}`}
-															>
-																<ImageIcon size={16} />
-																{/* <span className="text-xs">Image</span> */}
-															</button>
+																<button
+																	type="button"
+																	className="relative overflow-hidden flex items-center gap-2 px-3 py-1 rounded shadow bg-blue-200"
+																	onClick={(e) => {
+																		e.preventDefault();
+																		e.stopPropagation();
+																		pendingPartitionIndexForFileRef.current = idx;
+																		entryFileInputRef.current?.click();
+																	}}
+																	aria-label={`Select image for ${(text || "").trim()}`}
+																>
+																	{(() => {
+																		const id = lineIdsRef.current?.[idx];
+																		const src = id ? partitionImagesById[id] ?? partitionImages[idx] : partitionImages[idx];
+																		if (src) {
+																			return (
+																				<Image src={src} alt="thumb" fill className="object-cover" />
+																			);
+																		}
+																		return <ImageIcon size={16} />;
+																	})()}
+																</button>
+															</div>
 
 															{/* Share button: same style as Image button, placed to the right */}
 															<button
