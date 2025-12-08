@@ -39,6 +39,15 @@ import localFont from "next/font/local";
 
 import { Lexend_Deca } from "next/font/google";
 import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+	DialogDescription,
+	DialogFooter,
+	DialogClose,
+} from "@/components/ui/dialog";
 // DialogOverlay import removed (unused)
 const lexendDeca = Lexend_Deca({
 	subsets: ["latin"],
@@ -66,6 +75,8 @@ type BackgroundChange =
 
 export default function Home() {
 	const [names, setNames] = useState("Alice\nBob\nCharlie\nDiana\nEve");
+	// Whether any non-empty name text exists (used to enable/disable Reset)
+	const hasNames = names.trim() !== "";
 	const [spinning, setSpinning] = useState(false);
 	const [rotation, setRotation] = useState(0);
 	const [winner, setWinner] = useState<string | null>(null);
@@ -811,6 +822,24 @@ export default function Home() {
 		setNames("");
 		setCanUndo(historyRef.current.length > 1 && historyIndexRef.current > 0);
 		setTimeout(updateFocusedLine, 0);
+	};
+
+	// Show confirm dialog when resetting in Normal or Advanced mode
+	const [showResetConfirm, setShowResetConfirm] = useState(false);
+	// Variant controls which message the dialog shows ('normal' or 'advanced')
+	const [resetDialogVariant, setResetDialogVariant] = useState<
+		"normal" | "advanced"
+	>("normal");
+
+	const confirmReset = () => {
+		// perform reset and close dialog
+		handleReset();
+		setShowResetConfirm(false);
+	};
+
+	const cancelReset = (e?: React.MouseEvent) => {
+		if (e) e.preventDefault();
+		setShowResetConfirm(false);
 	};
 
 	// handleClearLine removed — replaced by `clearTextareaLine` / `clearLineDirect` usages
@@ -3114,6 +3143,38 @@ export default function Home() {
 				/>
 			)}
 
+			{/* Reset confirmation dialog for Normal mode */}
+			<Dialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
+				<DialogContent className="sm:max-w-[600px] w-[90%]">
+					<DialogHeader>
+						<DialogTitle>Confirm reset</DialogTitle>
+					</DialogHeader>
+					<DialogDescription>
+						{resetDialogVariant === "normal"
+							? "You may lose any image, color or % win set for participants in Advanced mode if you reset"
+							: "You may lose any image, color or % win set for participants  if you reset"}
+					</DialogDescription>
+					<DialogFooter>
+						<div className="flex justify-center gap-2">
+							<button
+								type="button"
+								onClick={cancelReset}
+								className="px-3 py-1 w-fit rounded bg-gray-100 text-gray-800 hover:bg-gray-200"
+							>
+								Cancel
+							</button>
+							<button
+								type="button"
+								onClick={confirmReset}
+								className="px-3 py-1 w-fit rounded bg-red-500 text-white hover:bg-red-600"
+							>
+								Confirm
+							</button>
+						</div>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
 			{/* Confetti - show while winner dialog is open */}
 			{showConfetti && Confetti ? (
 				<Confetti
@@ -3986,11 +4047,11 @@ export default function Home() {
 															) : null}
 															<div
 																data-line-index={idx}
-																className="flex items-center gap-2 pointer-events-auto bg-white px-2 rounded-md"
+																className="flex items-center gap-2 pointer-events-auto bg-white pl-2 pr-3 rounded-md"
 																style={{
 																	position: "absolute",
 																	top: `${top}px`,
-																	right: "6px",
+																	right: "-7px",
 																	display: showControls ? "flex" : "none",
 																}}
 															>
@@ -4040,8 +4101,16 @@ export default function Home() {
 												<div className="bg-gray-50 pb-2 pt-3 px-4 rounded-b-md flex gap-2 border-b-5 border-l-5 border-r-5 border-gray-300">
 													<button
 														type="button"
-														onClick={handleReset}
-														className="flex items-center gap-2 px-2 py- rounded bg-red-500 text-white text-sm hover:bg-red-600 shadow"
+														disabled={!hasNames}
+														onClick={(e) => {
+															// Normal mode should show confirmation dialog
+															e.preventDefault();
+															e.stopPropagation();
+															if (!hasNames) return;
+															setResetDialogVariant("normal");
+															setShowResetConfirm(true);
+														}}
+														className="flex items-center gap-2 px-2 py- rounded bg-red-500 text-white text-sm hover:bg-red-600 shadow disabled:opacity-30 disabled:cursor-not-allowed"
 													>
 														<Trash2 size={16} />
 														<span>Reset</span>
@@ -4460,8 +4529,15 @@ export default function Home() {
 												<div className="bg-gray-50 pb-2 pt-3 px-4 rounded-b-md flex gap-2 border-b-5 border-l-5 border-r-5 border-gray-300">
 													<button
 														type="button"
-														onClick={handleReset}
-														className="flex items-center gap-2 px-2 py- rounded bg-red-500 text-white text-sm hover:bg-red-600 shadow"
+														disabled={!hasNames}
+														onClick={(e) => {
+															e.preventDefault();
+															e.stopPropagation();
+															if (!hasNames) return;
+															setResetDialogVariant("advanced");
+															setShowResetConfirm(true);
+														}}
+														className="flex items-center gap-2 px-2 py- rounded bg-red-500 text-white text-sm hover:bg-red-600 shadow disabled:opacity-30 disabled:cursor-not-allowed"
 													>
 														<Trash2 size={16} />
 														<span>Reset</span>
