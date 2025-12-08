@@ -611,6 +611,27 @@ export default function Home() {
 		}
 	};
 
+	// Determine whether a given line index is currently visible inside the
+	// textarea's viewport (accounts for scrollTop, padding, and lineHeight).
+	const isTextareaLineVisible = (index: number) => {
+		const el = textareaRef.current;
+		if (!el) return false;
+		try {
+			const style = window.getComputedStyle(el);
+			let lineHeight = parseFloat(style.lineHeight || "");
+			if (isNaN(lineHeight) || lineHeight === 0) {
+				const fontSize = parseFloat(style.fontSize || "16") || 16;
+				lineHeight = fontSize * 1.2;
+			}
+			const paddingTop = parseFloat(style.paddingTop || "0") || 0;
+			const rawTop = paddingTop + index * lineHeight - el.scrollTop;
+			// visible if any part of the line intersects the textarea client area
+			return rawTop + lineHeight > 0 && rawTop < el.clientHeight;
+		} catch {
+			return false;
+		}
+	};
+
 	const measureLineWidth = (text: string) => {
 		const el = textareaRef.current;
 		const canvas = document.createElement("canvas");
@@ -904,17 +925,14 @@ export default function Home() {
 	) => {
 		if (e.key === "Enter" && !e.shiftKey) {
 			e.preventDefault();
-			// If not in Advanced mode and caret is at start, insert above current line
-			if (!advancedMode) {
-				try {
-					const caret =
-						(e.currentTarget as HTMLInputElement).selectionStart ?? 0;
-					if (caret === 0) {
-						insertLineBefore(index);
-						return;
-					}
-				} catch {}
-			}
+			// If caret is at start, insert above current line (works in Advanced mode too)
+			try {
+				const caret = (e.currentTarget as HTMLInputElement).selectionStart ?? 0;
+				if (caret === 0) {
+					insertLineBefore(index);
+					return;
+				}
+			} catch {}
 			insertLineAfter(index); // Insert a new line after the current index
 		}
 	};
@@ -2919,6 +2937,26 @@ export default function Home() {
 		}
 	}, [advancedMode, names, forcedEmpty]);
 
+	// Ensure we only remove textarea-empty lines at the moment the user switches
+	// from Normal -> Advanced mode. This prevents creating Advanced-mode inputs
+	// for lines that were empty in the textarea, while leaving Advanced-mode
+	// behaviors (Enter/focus handling) unchanged.
+	const prevAdvancedRef = useRef<boolean>(advancedMode);
+	useEffect(() => {
+		// Detect rising edge: was false, now true
+		if (!prevAdvancedRef.current && advancedMode) {
+			setNames((prev) => {
+				const lines = prev.split("\n");
+				const filtered = lines.filter((l) => (l || "").trim() !== "");
+				const next = filtered.join("\n");
+				if (next === prev) return prev;
+				pushHistory(next);
+				return next;
+			});
+		}
+		prevAdvancedRef.current = advancedMode;
+	}, [advancedMode]);
+
 	// Helper to determine whether a pointer event occurred inside an existing
 	// line element. Traverses DOM ancestors from event.target up to the
 	// container; this is robust across mobile browsers that may not expose
@@ -3546,7 +3584,7 @@ export default function Home() {
 										role="radio"
 										aria-checked={nameOrder === "shuffle"}
 										onClick={() => handleNamesOrderChange("shuffle")}
-										className="flex items-center gap-2 px-2 py-1 rounded-sm text-sm text-white shadow justify-start"
+										className="flex items-center gap-1 px-2 py-1 rounded-sm text-sm text-white shadow justify-start"
 										style={{
 											background: "#008cbd",
 											...(getButtonContrastStyles() || {}),
@@ -3562,7 +3600,7 @@ export default function Home() {
 										role="radio"
 										aria-checked={nameOrder === "ascending"}
 										onClick={() => handleNamesOrderChange("ascending")}
-										className="flex items-center gap-2 px-2 py-1 rounded-sm text-sm text-white shadow justify-start"
+										className="flex items-center gap-1 px-2 py-1 rounded-sm text-sm text-white shadow justify-start"
 										style={{
 											background: "#008cbd",
 											...(getButtonContrastStyles() || {}),
@@ -3577,7 +3615,7 @@ export default function Home() {
 										role="radio"
 										aria-checked={nameOrder === "descending"}
 										onClick={() => handleNamesOrderChange("descending")}
-										className="flex items-center gap-2 px-2 py-1 rounded-sm text-sm text-white shadow justify-start"
+										className="flex items-center gap-1 px-2 py-1 rounded-sm text-sm text-white shadow justify-start"
 										style={{
 											background: "#008cbd",
 											...(getButtonContrastStyles() || {}),
@@ -3593,7 +3631,7 @@ export default function Home() {
 												type="button"
 												role="button"
 												aria-label="Image"
-												className="flex items-center gap-2 px-2 py-1 rounded-sm text-sm text-white shadow justify-start"
+												className="flex items-center gap-1 px-2 py-1 rounded-sm text-sm text-white shadow justify-start"
 												style={{
 													background: "#008cbd",
 													...(getButtonContrastStyles() || {}),
@@ -3717,7 +3755,9 @@ export default function Home() {
 													const paddingLeft = getTextareaPaddingLeft();
 													const textWidth = measureLineWidth(trimmed);
 													const showControls =
-														focusedLine === idx && trimmed.length > 0;
+														focusedLine === idx &&
+														trimmed.length > 0 &&
+														isTextareaLineVisible(idx);
 													const maxStrikeWidth = Math.max(
 														0,
 														(textareaRef.current?.clientWidth ||
@@ -3824,7 +3864,7 @@ export default function Home() {
 													);
 												})}
 											</div>
-											<div className="absolute right-0 bottom-0  flex gap-2 px-4.5 py-2">
+											<div className="absolute right-0 bottom-2  flex gap-2 px-4.5 py-2">
 												<button
 													type="button"
 													onClick={handleReset}
