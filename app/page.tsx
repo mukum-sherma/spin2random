@@ -1394,6 +1394,13 @@ export default function Home() {
 		Record<string, string>
 	>({});
 
+	// Debug: trace changes to partition color maps to diagnose unexpected clears
+	useEffect(() => {
+		try {
+			console.debug("partitionColorsById CHANGED", { ...partitionColorsById });
+		} catch {}
+	}, [partitionColorsById]);
+
 	// Per-partition weights: legacy index-keyed and id-keyed maps.
 	// Each partition defaults to weight 1 when no explicit weight is set.
 	const [partitionWeights, setPartitionWeights] = useState<
@@ -1443,6 +1450,15 @@ export default function Home() {
 		if (!f) return;
 		const idx = pendingPartitionIndexForFileRef.current;
 		if (idx == null) return;
+		// Debug: snapshot colors before changing image
+		try {
+			console.debug("onEntryFileSelected - before", {
+				idx,
+				id: lineIdsRef.current?.[idx],
+				partitionColors: { ...partitionColors },
+				partitionColorsById: { ...partitionColorsById },
+			});
+		} catch {}
 		// Do not revoke the previous blob synchronously (it may still be used by
 		// an in-flight loader). Instead queue it for deferred revocation and
 		// clear the bitmap cache for this index so the loader re-decodes the
@@ -1463,6 +1479,13 @@ export default function Home() {
 			partitionImageBlobUrlsByIdRef.current[id] = url;
 			partitionImageBitmapByIdRef.current[id] = null;
 			setPartitionImagesById((prev) => ({ ...prev, [id]: url }));
+			try {
+				console.debug("onEntryFileSelected - setPartitionImagesById", {
+					id,
+					partitionColorsById: { ...partitionColorsById },
+					partitionColors: { ...partitionColors },
+				});
+			} catch {}
 		} else {
 			// fallback to index-keyed behavior
 			partitionImageBlobUrlsRef.current[idx] = url;
@@ -1795,99 +1818,117 @@ export default function Home() {
 			const pImg = id
 				? partitionImageBitmapByIdRef.current[id]
 				: partitionImageBitmapRefs.current[index];
+
+			// whether user explicitly selected a partition color
+			const explicitColor = id
+				? partitionColorsById[id]
+				: partitionColors[index];
+			const resolvedDefaultColor =
+				(id ? partitionColorsById[id] : undefined) ??
+				partitionColors[index] ??
+				colors[index % colors.length];
+
+			// Paint the base partition color first so there's always a visible
+			// background even if the user adds a partition image before selecting
+			// an explicit color. Explicit user-selected colors (explicitColor)
+			// will be drawn later on top of images as intended.
+			try {
+				ctx.beginPath();
+				ctx.moveTo(centerX, centerY);
+				ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+				ctx.closePath();
+				ctx.fillStyle = resolvedDefaultColor;
+				ctx.fill();
+			} catch (e) {
+				// ignore fill failures
+			}
+
 			if (pImg) {
 				ctx.save();
-				// Ensure the partition background color is painted under the image
-				// so uploaded images do not make the partition appear transparent.
 				try {
-					ctx.beginPath();
-					ctx.moveTo(centerX, centerY);
-					ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-					ctx.closePath();
-					ctx.fillStyle =
-						(id ? partitionColorsById[id] : undefined) ??
-						partitionColors[index] ??
-						colors[index % colors.length];
-					ctx.fill();
-				} catch {
-					// ignore fill failures
-				}
-				ctx.clip();
-				try {
-					// place image centered along the sector radius (center of the partition)
-					// Always scale-down the image so it fits comfortably inside the wheel
-					// midAngle computed per-slice for weighted segments
-					// const midAngle already available above
+					// First, draw the global wheel image into this sector (if any)
+					if (wheelImageBitmapRef.current) {
+						try {
+							const img = wheelImageBitmapRef.current as ImageBitmap;
+							ctx.beginPath();
+							ctx.moveTo(centerX, centerY);
+							ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+							ctx.closePath();
+							ctx.clip();
+
+							ctx.save();
+							ctx.translate(centerX, centerY);
+							ctx.rotate((rotation * Math.PI) / 180);
+							ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
+							ctx.restore();
+						} catch (e) {
+							console.warn(
+								"Failed to draw wheel image into partition sector:",
+								e
+							);
+						}
+					}
+
+					// If the user explicitly selected a partition color, draw it
+					// on top of the wheel image so it visually takes precedence.
+					if (explicitColor) {
+						ctx.beginPath();
+						ctx.moveTo(centerX, centerY);
+						ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+						ctx.closePath();
+						ctx.fillStyle = explicitColor as string;
+						ctx.fill();
+					}
+
+					// Finally draw the partition image on top (centered, rounded)
 					const iw = pImg.width;
 					const ih = pImg.height;
-					// Adjust max allowed image size by partition angular size so
-					// larger partitions get proportionally larger images.
 					const angleDeg = (angle * 180) / Math.PI;
-					// scale factor: small slices -> 0.7, large slices -> up to 1.4
 					const sizeFactor = Math.min(1.4, Math.max(0.7, angleDeg / 30));
 					const baseMax = radius * 0.4;
 					const maxW = baseMax * sizeFactor;
 					const maxH = baseMax * sizeFactor;
 					const scale = Math.min(1, maxW / iw, maxH / ih);
-					// ensure a reasonable minimum pixel size so images remain legible
 					const dw = Math.max(12, Math.round(iw * scale));
 					const dh = Math.max(12, Math.round(ih * scale));
-					// compute half-diagonal radius of scaled image
 					const imgRadius = Math.hypot(dw / 2, dh / 2);
-					// maximum center distance so image stays inside wheel (small margin)
 					const maxCenterDist = Math.max(0, radius - imgRadius - 6);
-					// preferred placement slightly outward so image doesn't crowd the center
-					// move image a bit closer to the wheel edge
 					const preferredDist = radius * 0.68;
 					const imgCenterDist = Math.min(preferredDist, maxCenterDist);
-					// cx/cy removed (unused) — use xPos/yPos computed below
-					// Draw image rotated so it remains perpendicular to the text.
-					// We translate to the computed partition center and rotate by
-					// (midAngle + 90deg) so the image stays perpendicular to text.
+
 					ctx.save();
 					try {
-						// re-create/ensure the sector clip so image stays within the wedge
 						ctx.beginPath();
 						ctx.moveTo(centerX, centerY);
 						ctx.arc(centerX, centerY, radius, startAngle, endAngle);
 						ctx.closePath();
 						ctx.clip();
 
-						// position relative to center
 						const xPos = Math.cos(midAngle) * imgCenterDist;
 						const yPos = Math.sin(midAngle) * imgCenterDist;
 
-						// move to image center, rotate so image has same orientation
-						// as the text (0° relative to the text), then draw centered.
 						ctx.translate(centerX + xPos, centerY + yPos);
 						ctx.rotate(midAngle);
 
-						// Clip into a rounded rectangle so the image has a soft
-						// rounded border. Radius fixed at 7px as requested.
-						try {
-							const rr = 7; // corner radius in pixels
-							const x0 = -dw / 2;
-							const y0 = -dh / 2;
-							const w = dw;
-							const h = dh;
-							const rx = Math.min(rr, w / 2);
-							const ry = Math.min(rr, h / 2);
-							ctx.beginPath();
-							ctx.moveTo(x0 + rx, y0);
-							ctx.lineTo(x0 + w - rx, y0);
-							ctx.quadraticCurveTo(x0 + w, y0, x0 + w, y0 + ry);
-							ctx.lineTo(x0 + w, y0 + h - ry);
-							ctx.quadraticCurveTo(x0 + w, y0 + h, x0 + w - rx, y0 + h);
-							ctx.lineTo(x0 + rx, y0 + h);
-							ctx.quadraticCurveTo(x0, y0 + h, x0, y0 + h - ry);
-							ctx.lineTo(x0, y0 + ry);
-							ctx.quadraticCurveTo(x0, y0, x0 + rx, y0);
-							ctx.closePath();
-							ctx.clip();
-						} catch (err) {
-							// if rounded clip fails for any reason, fallback to drawing normally
-							console.warn("Rounded clip failed:", err);
-						}
+						const rr = 7; // corner radius
+						const x0 = -dw / 2;
+						const y0 = -dh / 2;
+						const w = dw;
+						const h = dh;
+						const rx = Math.min(rr, w / 2);
+						const ry = Math.min(rr, h / 2);
+						ctx.beginPath();
+						ctx.moveTo(x0 + rx, y0);
+						ctx.lineTo(x0 + w - rx, y0);
+						ctx.quadraticCurveTo(x0 + w, y0, x0 + w, y0 + ry);
+						ctx.lineTo(x0 + w, y0 + h - ry);
+						ctx.quadraticCurveTo(x0 + w, y0 + h, x0 + w - rx, y0 + h);
+						ctx.lineTo(x0 + rx, y0 + h);
+						ctx.quadraticCurveTo(x0, y0 + h, x0, y0 + h - ry);
+						ctx.lineTo(x0, y0 + ry);
+						ctx.quadraticCurveTo(x0, y0, x0 + rx, y0);
+						ctx.closePath();
+						ctx.clip();
 
 						ctx.drawImage(pImg, -dw / 2, -dh / 2, dw, dh);
 					} finally {
@@ -1899,27 +1940,38 @@ export default function Home() {
 				ctx.restore();
 			} else if (wheelImageBitmapRef.current) {
 				ctx.save();
-				ctx.clip();
 				try {
+					// Clip to sector and draw the global wheel image
+					ctx.beginPath();
+					ctx.moveTo(centerX, centerY);
+					ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+					ctx.closePath();
+					ctx.clip();
+
 					const img = wheelImageBitmapRef.current as ImageBitmap;
-					// Rotate the image content by the current wheel rotation so the image
-					// appears to spin with the wheel. We translate to the wheel center,
-					// rotate the canvas, draw the image centered, then restore.
 					ctx.save();
 					ctx.translate(centerX, centerY);
 					ctx.rotate((rotation * Math.PI) / 180);
 					ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
 					ctx.restore();
+
+					// If the user explicitly selected a partition color, draw it
+					// on top of the wheel image so it takes visual precedence.
+					if (explicitColor) {
+						ctx.beginPath();
+						ctx.moveTo(centerX, centerY);
+						ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+						ctx.closePath();
+						ctx.fillStyle = explicitColor as string;
+						ctx.fill();
+					}
 				} catch (e) {
-					// ignore draw errors
 					console.warn("Failed to draw wheel image into canvas segment:", e);
 				}
 				ctx.restore();
 			} else {
 				// prefer custom partition color when present (id-keyed first)
-				const idColor = id ? partitionColorsById[id] : undefined;
-				ctx.fillStyle =
-					idColor ?? partitionColors[index] ?? colors[index % colors.length];
+				ctx.fillStyle = resolvedDefaultColor;
 				ctx.fill();
 			}
 
@@ -2868,7 +2920,6 @@ export default function Home() {
 				if (!col) return false;
 				const id = newIds[dest];
 				if (!id) return false;
-				if (Object.values(newColorById).includes(col)) return false;
 				newColorById[id] = col;
 				return true;
 			};
@@ -2897,8 +2948,22 @@ export default function Home() {
 					}
 				}
 			}
-			// Apply
-			setPartitionColorsById((prev) => ({ ...prev, ...newColorById }));
+			// Debug: show what we're about to merge into id-keyed colors
+			try {
+				console.debug("remap applying newColorById", newColorById);
+			} catch {}
+			// Apply: merge without overwriting any existing id-keyed colors.
+			// This ensures selecting images (which can trigger remaps) does not
+			// clobber a user's previously stored per-id color choice.
+			setPartitionColorsById((prev) => {
+				const out = { ...prev };
+				for (const k of Object.keys(newColorById)) {
+					if (!(k in out)) {
+						out[k] = newColorById[k];
+					}
+				}
+				return out;
+			});
 		} catch {
 			// best-effort
 		}
