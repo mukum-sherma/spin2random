@@ -600,7 +600,8 @@ export default function Home() {
 	const calcIconTop = (ta?: HTMLTextAreaElement | null, lineIdx?: number) => {
 		const el = ta ?? textareaRef.current;
 		const idx = lineIdx ?? focusedLine ?? 0;
-		if (!el) return 0;
+		// Guard for SSR: return safe default when no DOM is available
+		if (typeof window === "undefined" || !el) return 0;
 		try {
 			const style = window.getComputedStyle(el);
 			let lineHeight = parseFloat(style.lineHeight || "");
@@ -619,7 +620,8 @@ export default function Home() {
 
 	const getLineHeight = () => {
 		const el = textareaRef.current;
-		if (!el) return 20;
+		// SSR-safe fallback
+		if (typeof window === "undefined" || !el) return 20;
 		try {
 			const style = window.getComputedStyle(el);
 			let lineHeight = parseFloat(style.lineHeight || "");
@@ -635,7 +637,7 @@ export default function Home() {
 
 	const getTextareaPaddingLeft = () => {
 		const el = textareaRef.current;
-		if (!el) return 8;
+		if (typeof window === "undefined" || !el) return 8;
 		try {
 			const style = window.getComputedStyle(el);
 			return parseFloat(style.paddingLeft || "8") || 8;
@@ -648,7 +650,7 @@ export default function Home() {
 	// textarea's viewport (accounts for scrollTop, padding, and lineHeight).
 	const isTextareaLineVisible = (index: number) => {
 		const el = textareaRef.current;
-		if (!el) return false;
+		if (typeof window === "undefined" || !el) return false;
 		try {
 			const style = window.getComputedStyle(el);
 			let lineHeight = parseFloat(style.lineHeight || "");
@@ -667,6 +669,9 @@ export default function Home() {
 
 	const measureLineWidth = (text: string) => {
 		const el = textareaRef.current;
+		// SSR-safe: if no DOM, return a conservative width estimate
+		if (typeof document === "undefined" || typeof window === "undefined" || !el)
+			return Math.max(12, text.length * 9 + 4);
 		const canvas = document.createElement("canvas");
 		const ctx = canvas.getContext("2d");
 		if (!ctx || !el) return Math.max(12, text.length * 9 + 4);
