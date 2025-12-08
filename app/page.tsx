@@ -48,6 +48,7 @@ import {
 	DialogFooter,
 	DialogClose,
 } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 // DialogOverlay import removed (unused)
 const lexendDeca = Lexend_Deca({
 	subsets: ["latin"],
@@ -3941,11 +3942,13 @@ export default function Home() {
 										</DropdownMenuContent>
 									</DropdownMenu>
 									<label className="flex items-center gap-2 ml-2">
-										<input
-											type="checkbox"
+										<Checkbox
+											aria-label="Advanced"
 											checked={advancedMode}
-											onChange={(e) => setAdvancedMode(e.target.checked)}
-											className="w-4 h-4"
+											onCheckedChange={(v: boolean | "indeterminate") =>
+												setAdvancedMode(!!v)
+											}
+											className="min-h-6 min-w-6 border border-gray-300 shadow-sm p-1 data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-500 data-[state=checked]:text-white dark:data-[state=checked]:border-blue-700 dark:data-[state=checked]:bg-blue-500"
 										/>
 										<span className="text-sm">Advanced</span>
 									</label>
@@ -4055,15 +4058,16 @@ export default function Home() {
 																	display: showControls ? "flex" : "none",
 																}}
 															>
-																<input
-																	type="checkbox"
+																<Checkbox
 																	aria-label={`Include ${trimmed} on wheel`}
-																	onPointerDown={(e) => e.stopPropagation()}
-																	checked={isIncluded}
-																	onChange={(e) =>
-																		handleToggleInclude(idx, e.target.checked)
+																	onPointerDown={(e: React.PointerEvent) =>
+																		e.stopPropagation()
 																	}
-																	className="w-5 h-5 bg-white rounded"
+																	checked={isIncluded}
+																	onCheckedChange={(
+																		v: boolean | "indeterminate"
+																	) => handleToggleInclude(idx, !!v)}
+																	className="min-h-6 min-w-6 border border-gray-300 shadow-sm p-1 data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-500 data-[state=checked]:text-white dark:data-[state=checked]:border-blue-700 dark:data-[state=checked]:bg-blue-500"
 																/>
 																<button
 																	type="button"
@@ -4279,20 +4283,21 @@ export default function Home() {
 																		(text || "").trim() || forcedEmpty[idx]
 																			? "absolute flex"
 																			: "hidden"
-																	} items-center gap-3 right-3 md:right-2`}
+																	} items-center gap-2 right-5 md:right-5`}
 																	style={{ width: ICON_DIV_WIDTH }}
 																>
-																	<input
-																		type="checkbox"
+																	<Checkbox
 																		aria-label={`Include ${(
 																			text || ""
 																		).trim()} on wheel`}
-																		onPointerDown={(e) => e.stopPropagation()}
-																		checked={isIncluded}
-																		onChange={(e) =>
-																			handleToggleInclude(idx, e.target.checked)
+																		onPointerDown={(e: React.PointerEvent) =>
+																			e.stopPropagation()
 																		}
-																		className="w-5 h-5 bg-white rounded"
+																		checked={isIncluded}
+																		onCheckedChange={(
+																			v: boolean | "indeterminate"
+																		) => handleToggleInclude(idx, !!v)}
+																		className="min-h-6 min-w-6 border border-gray-300 shadow-sm p-1 data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-500 data-[state=checked]:text-white dark:data-[state=checked]:border-blue-700 dark:data-[state=checked]:bg-blue-500"
 																	/>
 																	<button
 																		type="button"
@@ -4314,7 +4319,7 @@ export default function Home() {
 																			}
 																		}}
 																		aria-label={`Clear line ${idx + 1}`}
-																		className="w-6 h-6 bg-white/90 rounded shadow-md flex items-center justify-center hover:bg-white p-0"
+																		className="w-6 h-6 p-1 bg-white/90 rounded shadow-md flex items-center justify-center hover:bg-white"
 																	>
 																		<X size={18} color="#404040" />
 																	</button>
@@ -4328,7 +4333,7 @@ export default function Home() {
 																			deleteLine(idx);
 																		}}
 																		aria-label={`Delete line ${idx + 1}`}
-																		className="w-6 h-6 bg-red-100 text-red-600 rounded shadow-md flex items-center justify-center hover:bg-red-200 p-0"
+																		className="w-6 h-6 bg-red-100 text-red-600 rounded shadow-md flex items-center justify-center hover:bg-red-200 p-1"
 																	>
 																		<Trash2 size={16} />
 																	</button>
