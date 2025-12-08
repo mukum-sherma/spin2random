@@ -360,6 +360,8 @@ export default function Home() {
 	// Compute a simple contrast color (black or white) from an ImageBitmap by
 	// sampling pixels and computing average luminance.
 	const computeContrastFromBitmap = (bmp: ImageBitmap) => {
+		// If running on the server (no DOM), return a safe default
+		if (typeof document === "undefined") return "#000000";
 		try {
 			const sampleSize = 64; // draw into a small canvas for speed
 			const off = document.createElement("canvas");
@@ -392,6 +394,37 @@ export default function Home() {
 
 	// Compute contrast (black or white) from a CSS color string (hex or rgb).
 	const computeContrastFromColor = (color: string) => {
+		// If we are running on the server, avoid DOM operations and fall back
+		// to a safe default. This prevents SSR/build-time errors (Vercel).
+		if (typeof document === "undefined") {
+			// Attempt a simple parse for hex/rgb; otherwise default to black.
+			const s = (color || "").trim().toLowerCase();
+			if (s.startsWith("#")) {
+				let hex = s.slice(1);
+				if (hex.length === 3)
+					hex = hex
+						.split("")
+						.map((c) => c + c)
+						.join("");
+				if (hex.length === 6) {
+					const r = parseInt(hex.slice(0, 2), 16);
+					const g = parseInt(hex.slice(2, 4), 16);
+					const b = parseInt(hex.slice(4, 6), 16);
+					const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+					return lum < 128 ? "#ffffff" : "#000000";
+				}
+				return "#000000";
+			}
+			if (s.startsWith("rgb(") || s.startsWith("rgba(")) {
+				const nums = s.replace(/rgba?\(|\)|\s/g, "").split(",");
+				const r = parseInt(nums[0], 10) || 0;
+				const g = parseInt(nums[1], 10) || 0;
+				const b = parseInt(nums[2], 10) || 0;
+				const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+				return lum < 128 ? "#ffffff" : "#000000";
+			}
+			return "#000000";
+		}
 		try {
 			let r = 0,
 				g = 0,
