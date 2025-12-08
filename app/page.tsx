@@ -10,13 +10,7 @@ import {
 } from "react";
 import dynamic from "next/dynamic";
 // using native textarea here so we can overlay per-line controls
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+// dialog components were unused in the active UI (we use a custom dialog block)
 import {
 	Maximize2,
 	Minimize2,
@@ -32,7 +26,7 @@ import {
 	UploadCloud,
 	Grip,
 	Image as ImageIcon,
-	Percent,
+	// Percent icon not used in this file
 } from "lucide-react";
 import Image from "next/image";
 import {
@@ -153,32 +147,7 @@ export default function Home() {
 		[closePalette]
 	);
 
-	const handlePaletteReset = useCallback(
-		(idx: number) => {
-			const id = lineIdsRef.current?.[idx];
-			if (id) {
-				setPartitionColorsById((prev) => {
-					const copy = { ...prev };
-					delete copy[id];
-					return copy;
-				});
-				setPartitionColors((prev) => {
-					const copy = { ...prev };
-					delete copy[idx];
-					return copy;
-				});
-			} else {
-				setPartitionColors((prev) => {
-					const copy = { ...prev };
-					delete copy[idx];
-					return copy;
-				});
-			}
-			drawWheelRef.current?.();
-			closePalette();
-		},
-		[closePalette]
-	);
+	// palette reset handler removed (unused)
 
 	// Close on outside click or Escape
 	useEffect(() => {
@@ -397,7 +366,7 @@ export default function Home() {
 			off.width = sampleSize;
 			off.height = sampleSize;
 			const ctx = off.getContext("2d");
-			if (!ctx) return "#000";
+			if (!ctx) return "#000"; // Ensure context is available
 			// draw the bitmap scaled to sampleSize
 			ctx.drawImage(bmp, 0, 0, sampleSize, sampleSize);
 			const data = ctx.getImageData(0, 0, sampleSize, sampleSize).data;
@@ -785,32 +754,7 @@ export default function Home() {
 		setTimeout(updateFocusedLine, 0);
 	};
 
-	const handleClearLine = (index: number) => {
-		const el = textareaRef.current;
-		if (!el) return;
-		const lines = el.value.split("\n");
-		const clearedName = (lines[index] || "").trim();
-		lines[index] = "";
-		if (clearedName) {
-			setIncludeMap((prev) => {
-				const copy = { ...prev };
-				delete copy[clearedName];
-				return copy;
-			});
-		}
-		const newValue = lines.join("\n");
-		setNames(newValue);
-		// position caret at start of the cleared line
-		const pos = lines.slice(0, index).reduce((acc, l) => acc + l.length + 1, 0);
-		setTimeout(() => {
-			if (textareaRef.current) {
-				textareaRef.current.focus();
-				textareaRef.current.selectionStart = pos;
-				textareaRef.current.selectionEnd = pos;
-				updateFocusedLine();
-			}
-		}, 0);
-	};
+	// handleClearLine removed — replaced by `clearTextareaLine` / `clearLineDirect` usages
 
 	const handleToggleInclude = (index: number, checked: boolean) => {
 		const lines = names.split("\n").map((l) => l.trim());
@@ -971,7 +915,7 @@ export default function Home() {
 					}
 				} catch {}
 			}
-			insertLineAfter(index);
+			insertLineAfter(index); // Insert a new line after the current index
 		}
 	};
 
@@ -1090,39 +1034,7 @@ export default function Home() {
 	// When a names-list input (non-advanced mode) receives focus, remove any other
 	// empty lines (whitespace-only) but keep the focused line. Mirrors
 	// `handleAdvancedFocus` behavior for the names-list view.
-	const handleListFocus = (index: number) => {
-		const lines = names.split("\n");
-		const emptyOthers = lines.some((l, i) => i !== index && l.trim() === "");
-		if (!emptyOthers) {
-			setFocusedLine(index);
-			setControlsTick((t) => t + 1);
-			return;
-		}
-
-		const removedBefore = lines
-			.slice(0, index)
-			.filter((l) => l.trim() === "").length;
-		const kept: string[] = [];
-		for (let i = 0; i < lines.length; i++) {
-			if (i !== index && lines[i].trim() === "") continue;
-			kept.push(lines[i]);
-		}
-
-		const newValue = kept.join("\n");
-		setNames(newValue);
-
-		const newIndex = index - removedBefore;
-		setTimeout(() => {
-			const el = listInputRefs.current[newIndex];
-			if (el) {
-				el.focus();
-				const len = el.value.length;
-				el.selectionStart = el.selectionEnd = len;
-			}
-			setFocusedLine(newIndex);
-			setControlsTick((t) => t + 1);
-		}, 0);
-	};
+	// handleListFocus removed — advanced/textarea focus handling consolidated elsewhere
 
 	// Edit a specific line's text (Advanced mode). Updates names and keeps includeMap in sync.
 	const editLine = (index: number, newText: string) => {
@@ -1793,67 +1705,7 @@ export default function Home() {
 	const pageColorInputRef = useRef<HTMLInputElement | null>(null);
 	const pendingPartitionIndexRef = useRef<number | null>(null);
 
-	const openColorPickerFor = useCallback(
-		(idx: number, anchor?: HTMLElement) => {
-			try {
-				const el = pageColorInputRef.current;
-				if (!el) return;
-
-				pendingPartitionIndexRef.current = idx;
-
-				// Prefer id-keyed color when available so the native picker reflects
-				// the user's persisted choice for this logical entry.
-				const id = lineIdsRef.current?.[idx];
-				const existing = id
-					? partitionColorsById[id] ??
-					  partitionColors[idx] ??
-					  colors[idx % colors.length]
-					: partitionColors[idx] ?? colors[idx % colors.length];
-				el.value = existing || "#ffffff";
-
-				if (anchor) {
-					const r = anchor.getBoundingClientRect();
-					const left = Math.round(r.left + r.width / 2);
-					// try to place below the button
-					let desiredTop = Math.round(r.bottom + 6);
-					if (desiredTop + 30 > window.innerHeight) {
-						// not enough room below; place above the button
-						desiredTop = Math.max(8, Math.round(r.top - 36));
-					}
-					const top = Math.min(
-						window.innerHeight - 12,
-						Math.max(8, desiredTop)
-					);
-
-					el.style.position = "fixed";
-					el.style.left = `${left}px`;
-					el.style.top = `${top}px`;
-					el.style.width = `28px`;
-					el.style.height = `28px`;
-					el.style.opacity = "0";
-					el.style.transform = "translate(-50%, 0)";
-					el.style.zIndex = "2147483647";
-					el.style.pointerEvents = "auto";
-					el.tabIndex = -1;
-				}
-
-				try {
-					// Prefer showPicker if available, otherwise click()
-					const maybePicker = el as HTMLInputElement & {
-						showPicker?: () => void;
-					};
-					if (typeof maybePicker.showPicker === "function")
-						maybePicker.showPicker();
-					else el.click();
-				} catch (_e) {
-					// ignore
-				}
-			} catch (err) {
-				console.warn("openColorPickerFor failed:", err);
-			}
-		},
-		[colors, partitionColors, partitionColorsById]
-	);
+	// openColorPickerFor removed — native color input handling consolidated inline
 
 	// Color picker is opened via ephemeral native input; no closeColorPicker needed.
 
@@ -1939,7 +1791,7 @@ export default function Home() {
 						partitionColors[index] ??
 						colors[index % colors.length];
 					ctx.fill();
-				} catch (fillErr) {
+				} catch {
 					// ignore fill failures
 				}
 				ctx.clip();
@@ -1970,8 +1822,7 @@ export default function Home() {
 					// move image a bit closer to the wheel edge
 					const preferredDist = radius * 0.68;
 					const imgCenterDist = Math.min(preferredDist, maxCenterDist);
-					const cx = centerX + Math.cos(midAngle) * imgCenterDist - dw / 2;
-					const cy = centerY + Math.sin(midAngle) * imgCenterDist - dh / 2;
+					// cx/cy removed (unused) — use xPos/yPos computed below
 					// Draw image rotated so it remains perpendicular to the text.
 					// We translate to the computed partition center and rotate by
 					// (midAngle + 90deg) so the image stays perpendicular to text.
@@ -2086,7 +1937,7 @@ export default function Home() {
 							) || finalTextColor;
 						// cache it for subsequent draws
 						partitionImageContrastByIdRef.current[id] = finalTextColor;
-					} catch (e) {
+					} catch {
 						// ignore - keep default
 					}
 				}
@@ -2101,7 +1952,7 @@ export default function Home() {
 							) || finalTextColor;
 						// cache it for subsequent draws
 						partitionImageContrastRef.current[index] = finalTextColor;
-					} catch (e) {
+					} catch {
 						// ignore - keep default
 					}
 				}
@@ -2453,7 +2304,7 @@ export default function Home() {
 					try {
 						partitionImageContrastByIdRef.current[id] =
 							computeContrastFromBitmap(bmp) || "#000000";
-					} catch (err) {
+					} catch {
 						partitionImageContrastByIdRef.current[id] = "#000000";
 					}
 					drawWheelRef.current?.();
@@ -2971,7 +2822,7 @@ export default function Home() {
 		// Keep legacy index-keyed maps for fallback
 		partitionImageBlobUrlsRef.current = newBlobMap;
 		partitionImageBitmapRefs.current = newBitmapMap;
-		setPartitionImages((_) => {
+		setPartitionImages(() => {
 			const out: Record<number, string> = {};
 			Object.keys(newBlobMap).forEach((k) => {
 				const i = Number(k);
@@ -3030,7 +2881,7 @@ export default function Home() {
 			}
 			// Apply
 			setPartitionColorsById((prev) => ({ ...prev, ...newColorById }));
-		} catch (_) {
+		} catch {
 			// best-effort
 		}
 
