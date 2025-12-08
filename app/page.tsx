@@ -3903,7 +3903,7 @@ export default function Home() {
 												onSelect={() => setTimeout(updateFocusedLine, 0)}
 												onScroll={() => setControlsTick((t) => t + 1)}
 												aria-label="Edit names, one per line"
-												className="w-full resize-none whitespace-pre rounded-[7px] bg-gray-50 text-gray-800 text-[18px] md:text-[19px] font-bold border-4 shadow-inner border-gray-300 px-3 pt-3 pb-8 leading-7 focus:outline-none"
+												className="w-full z-20 resize-none whitespace-pre rounded-[7px] bg-gray-50 text-gray-800 text-[18px] md:text-[19px] font-bold border-4 shadow-inner border-gray-300 px-3 pt-3 leading-7 focus:outline-none"
 												style={{
 													width: "100%",
 													height: textareaSize.height
@@ -3986,7 +3986,7 @@ export default function Home() {
 															) : null}
 															<div
 																data-line-index={idx}
-																className="flex items-center gap-2 pointer-events-auto"
+																className="flex items-center gap-2 pointer-events-auto bg-white px-2 rounded-md"
 																style={{
 																	position: "absolute",
 																	top: `${top}px`,
@@ -4035,438 +4035,452 @@ export default function Home() {
 													);
 												})}
 											</div>
-											<div className="absolute right-0 bottom-2  flex gap-2 px-4.5 py-2">
-												<button
-													type="button"
-													onClick={handleReset}
-													className="px-2 py-1 rounded bg-red-500 text-white text-sm hover:bg-red-600 shadow"
-												>
-													Reset
-												</button>
-												<button
-													type="button"
-													onClick={handleUndo}
-													disabled={!canUndo}
-													className="px-2 py-1 text-gray-50 rounded bg-[#404040] text-sm hover:bg-gray-300 disabled:opacity-30 disabled:cursor-not-allowed shadow"
-												>
-													Undo
-												</button>
+
+											<div className="w-full flex justify-center gap-2 rounded-sm z-0 relative -mt-[10.2px]">
+												<div className="bg-gray-50 pb-2 pt-3 px-4 rounded-b-md flex gap-2 border-b-5 border-l-5 border-r-5 border-gray-300">
+													<button
+														type="button"
+														onClick={handleReset}
+														className="flex items-center gap-2 px-2 py- rounded bg-red-500 text-white text-sm hover:bg-red-600 shadow"
+													>
+														<Trash2 size={16} />
+														<span>Reset</span>
+													</button>
+													<button
+														type="button"
+														onClick={handleUndo}
+														disabled={!canUndo}
+														className="px-2 py-1 text-gray-50 rounded bg-[#404040] text-sm hover:bg-gray-500 disabled:opacity-30 disabled:cursor-not-allowed shadow"
+													>
+														Undo
+													</button>
+												</div>
 											</div>
 										</div>
 									) : (
-										/* Advanced mode: render same-size interactive div */
-										<div
-											role="region"
-											aria-label="Advanced names editor"
-											className="w-full whitespace-pre rounded-[7px] bg-gray-50 text-gray-800 overflow-auto text-[18px] md:text-[19px] font-bold border-4 shadow-inner border-gray-300 px-2 pt-3 pb-8 leading-7"
-											onPointerDown={(e) => {
-												if (isEventInsideLine(e)) return;
-												// No rendered lines: reveal the area and force
-												// the first row visible so controls render.
-												if (renderLines.length === 0) {
-													setHideEmpty(false);
-													setForcedEmpty((prev) => ({ ...prev, 0: true }));
-													e.stopPropagation();
-													return;
-												}
+										<>
+											<div
+												role="region"
+												aria-label="Advanced names editor"
+												className="w-full whitespace-pre rounded-[7px] bg-gray-50 text-gray-800 overflow-auto text-[18px] md:text-[19px] font-bold border-4 shadow-inner border-gray-300 px-2 pt-3 pb-8 leading-7"
+												onPointerDown={(e) => {
+													if (isEventInsideLine(e)) return;
+													// No rendered lines: reveal the area and force
+													// the first row visible so controls render.
+													if (renderLines.length === 0) {
+														setHideEmpty(false);
+														setForcedEmpty((prev) => ({ ...prev, 0: true }));
+														e.stopPropagation();
+														return;
+													}
 
-												// If the last rendered line is empty, do not
-												// create another empty row — focus the existing
-												// last input instead to avoid flicker.
-												const lastIdx = renderLines.length - 1;
-												const lastText = renderLines[lastIdx] ?? "";
-												if ((lastText || "").trim() === "") {
-													setHideEmpty(false);
-													// focus the existing last input if available
-													setTimeout(() => {
-														const ref = advancedInputRefs.current[lastIdx];
-														if (ref) {
-															try {
-																ref.focus();
-																const len = ref.value.length;
-																ref.selectionStart = ref.selectionEnd = len;
-															} catch {}
-														}
-													}, 0);
-													e.stopPropagation();
-													return;
-												}
+													// If the last rendered line is empty, do not
+													// create another empty row — focus the existing
+													// last input instead to avoid flicker.
+													const lastIdx = renderLines.length - 1;
+													const lastText = renderLines[lastIdx] ?? "";
+													if ((lastText || "").trim() === "") {
+														setHideEmpty(false);
+														// focus the existing last input if available
+														setTimeout(() => {
+															const ref = advancedInputRefs.current[lastIdx];
+															if (ref) {
+																try {
+																	ref.focus();
+																	const len = ref.value.length;
+																	ref.selectionStart = ref.selectionEnd = len;
+																} catch {}
+															}
+														}, 0);
+														e.stopPropagation();
+														return;
+													}
 
-												// Otherwise insert a new empty row after the last one
-												insertLineAfter(lastIdx);
-												e.stopPropagation();
-											}}
-											style={{
-												width: textareaSize.width
-													? textareaSize.width + "px"
-													: undefined,
-												height: textareaSize.height
-													? textareaSize.height + "px"
-													: undefined,
-												minHeight: "600px",
-												maxHeight: "900px",
-												overflowY: "auto",
-												paddingBottom: "100px",
-											}}
-										>
-											{renderLines.map((ln, idx) => {
-												const text = ln;
-												const isIncluded = (text || "").trim()
-													? includeMap[(text || "").trim()] !== false
-													: false;
-												// Palette button color: prefer id-keyed per-partition override
-												const pid = lineIdsRef.current?.[idx];
-												const paletteBtnColor = pid
-													? partitionColorsById[pid] ??
-													  partitionColors[idx] ??
-													  colors[idx % colors.length]
-													: partitionColors[idx] ?? colors[idx % colors.length];
-												const paletteBtnTextColor =
-													computeContrastFromColor(paletteBtnColor);
-												const weight = getWeightForIndex(idx);
-												const percent = Math.round(
-													(weight / totalWeightForRender) * 100
-												);
-												return (
-													<div
-														key={`adv-line-${idx}`}
-														data-line-index={idx}
-														className="flex flex-col gap-2 mb-1 py-2 w-full rounded-sm border"
-														style={{
-															backgroundColor:
-																idx % 2 === 0
-																	? "rgba(0,0,0,0.05)"
-																	: "transparent",
-															borderColor:
-																dragOverIndex === idx ? "#0671ff" : "#e5e7eb",
-															borderWidth: dragOverIndex === idx ? 2 : 1,
-														}}
-														onDragOver={(e) => {
-															e.preventDefault();
-															setDragOverIndex(idx);
-															try {
-																if (e.dataTransfer)
-																	e.dataTransfer.dropEffect = "move";
-															} catch {}
-														}}
-														onDragLeave={() => setDragOverIndex(null)}
-														onDrop={(e) => {
-															e.preventDefault();
-															const from = dragIndexRef.current;
-															if (from == null) {
+													// Otherwise insert a new empty row after the last one
+													insertLineAfter(lastIdx);
+													e.stopPropagation();
+												}}
+												style={{
+													width: textareaSize.width
+														? textareaSize.width + "px"
+														: undefined,
+													height: textareaSize.height
+														? textareaSize.height + "px"
+														: undefined,
+													minHeight: "600px",
+													maxHeight: "900px",
+													overflowY: "auto",
+													paddingBottom: "100px",
+												}}
+											>
+												{renderLines.map((ln, idx) => {
+													const text = ln;
+													const isIncluded = (text || "").trim()
+														? includeMap[(text || "").trim()] !== false
+														: false;
+													// Palette button color: prefer id-keyed per-partition override
+													const pid = lineIdsRef.current?.[idx];
+													const paletteBtnColor = pid
+														? partitionColorsById[pid] ??
+														  partitionColors[idx] ??
+														  colors[idx % colors.length]
+														: partitionColors[idx] ??
+														  colors[idx % colors.length];
+													const paletteBtnTextColor =
+														computeContrastFromColor(paletteBtnColor);
+													const weight = getWeightForIndex(idx);
+													const percent = Math.round(
+														(weight / totalWeightForRender) * 100
+													);
+													return (
+														<div
+															key={`adv-line-${idx}`}
+															data-line-index={idx}
+															className="flex flex-col gap-2 mb-1 py-2 w-full rounded-sm border"
+															style={{
+																backgroundColor:
+																	idx % 2 === 0
+																		? "rgba(0,0,0,0.05)"
+																		: "transparent",
+																borderColor:
+																	dragOverIndex === idx ? "#0671ff" : "#e5e7eb",
+																borderWidth: dragOverIndex === idx ? 2 : 1,
+															}}
+															onDragOver={(e) => {
+																e.preventDefault();
+																setDragOverIndex(idx);
+																try {
+																	if (e.dataTransfer)
+																		e.dataTransfer.dropEffect = "move";
+																} catch {}
+															}}
+															onDragLeave={() => setDragOverIndex(null)}
+															onDrop={(e) => {
+																e.preventDefault();
+																const from = dragIndexRef.current;
+																if (from == null) {
+																	setDragOverIndex(null);
+																	return;
+																}
+																const to = idx;
+																if (from !== to) {
+																	const linesArr = names.split("\n");
+																	const item =
+																		linesArr.splice(from, 1)[0] ?? "";
+																	linesArr.splice(to, 0, item);
+																	const next = linesArr.join("\n");
+																	pushHistory(next);
+																	setNames(next);
+																	setTimeout(() => {
+																		setControlsTick((t) => t + 1);
+																	}, 0);
+																}
+																dragIndexRef.current = null;
 																setDragOverIndex(null);
-																return;
-															}
-															const to = idx;
-															if (from !== to) {
-																const linesArr = names.split("\n");
-																const item = linesArr.splice(from, 1)[0] ?? "";
-																linesArr.splice(to, 0, item);
-																const next = linesArr.join("\n");
-																pushHistory(next);
-																setNames(next);
-																setTimeout(() => {
-																	setControlsTick((t) => t + 1);
-																}, 0);
-															}
-															dragIndexRef.current = null;
-															setDragOverIndex(null);
-														}}
-													>
-														{/* First inner div: input + checkbox + clear */}
-														<div className="flex items-center justify-between w-full relative pl-2">
-															<input
-																type="text"
-																ref={(el) => {
-																	advancedInputRefs.current[idx] = el;
-																}}
-																onFocus={() => handleAdvancedFocus(idx)}
-																onKeyDown={(e) => handleKeyDownInsert(e, idx)}
-																value={text || ""}
-																onChange={(e) => editLine(idx, e.target.value)}
-																aria-label={`Edit name for line ${idx + 1}`}
-																style={{
-																	width: `calc(100% - ${
-																		ICON_DIV_WIDTH + 10
-																	}px)`,
-																}}
-																className={`mr-3 bg-transparent truncate text-[18px] md:text-[19px] font-bold focus:outline-none ${
-																	!isIncluded
-																		? "line-through decoration-red-400 text-gray-400"
-																		: ""
-																}`}
-																maxLength={50}
-															/>
-															<div
-																className={`${
-																	(text || "").trim() || forcedEmpty[idx]
-																		? "absolute flex"
-																		: "hidden"
-																} items-center gap-3 right-3 md:right-2`}
-																style={{ width: ICON_DIV_WIDTH }}
-															>
+															}}
+														>
+															{/* First inner div: input + checkbox + clear */}
+															<div className="flex items-center justify-between w-full relative pl-2">
 																<input
-																	type="checkbox"
-																	aria-label={`Include ${(
-																		text || ""
-																	).trim()} on wheel`}
-																	onPointerDown={(e) => e.stopPropagation()}
-																	checked={isIncluded}
+																	type="text"
+																	ref={(el) => {
+																		advancedInputRefs.current[idx] = el;
+																	}}
+																	onFocus={() => handleAdvancedFocus(idx)}
+																	onKeyDown={(e) => handleKeyDownInsert(e, idx)}
+																	value={text || ""}
 																	onChange={(e) =>
-																		handleToggleInclude(idx, e.target.checked)
+																		editLine(idx, e.target.value)
 																	}
-																	className="w-5 h-5 bg-white rounded"
-																/>
-																<button
-																	type="button"
-																	onPointerDown={(e) => e.stopPropagation()}
-																	onClick={(e) => {
-																		e.preventDefault();
-																		e.stopPropagation();
-																		setHideEmpty(false);
-																		clearLineDirect(idx);
-																		const ref = advancedMode
-																			? advancedInputRefs.current[idx]
-																			: listInputRefs.current[idx];
-																		if (ref) {
-																			try {
-																				ref.focus();
-																				ref.selectionStart =
-																					ref.selectionEnd = 0;
-																			} catch {}
-																		}
-																	}}
-																	aria-label={`Clear line ${idx + 1}`}
-																	className="w-6 h-6 bg-white/90 rounded shadow-md flex items-center justify-center hover:bg-white p-0"
-																>
-																	<X size={18} color="#404040" />
-																</button>
-																<button
-																	type="button"
-																	onPointerDown={(e) => e.stopPropagation()}
-																	onClick={(e) => {
-																		e.preventDefault();
-																		e.stopPropagation();
-																		setHideEmpty(false);
-																		deleteLine(idx);
-																	}}
-																	aria-label={`Delete line ${idx + 1}`}
-																	className="w-6 h-6 bg-red-100 text-red-600 rounded shadow-md flex items-center justify-center hover:bg-red-200 p-0"
-																>
-																	<Trash2 size={16} />
-																</button>
-															</div>
-														</div>
-														{/* Second inner div: palette button */}
-														<div className="flex gap-3 flex-wrap justify-between">
-															<div className="flex items-center gap-2">
-																{/* Drag handle (grip) - acts as the draggable handle for reordering rows */}
-																<button
-																	type="button"
-																	draggable
-																	onDragStart={(e) => {
-																		e.stopPropagation();
-																		dragIndexRef.current = idx;
-																		try {
-																			if (e.dataTransfer) {
-																				e.dataTransfer.setData(
-																					"text/plain",
-																					String(idx)
-																				);
-																				e.dataTransfer.effectAllowed = "move";
-																			}
-																		} catch {}
-																	}}
-																	onDragEnd={() => {
-																		dragIndexRef.current = null;
-																		setDragOverIndex(null);
-																	}}
-																	onPointerDown={(e) => e.stopPropagation()}
-																	aria-label={`Drag ${(
-																		(text || "") as string
-																	).trim()}`}
-																	className="flex items-center gap-2 px-3 py-1 rounded shadow bg-blue-200"
-																>
-																	<Grip size={16} />
-																</button>
-																<button
-																	type="button"
-																	className="flex items-center gap-2 px-3 py-1 rounded shadow"
+																	aria-label={`Edit name for line ${idx + 1}`}
 																	style={{
-																		background: paletteBtnColor,
-																		color: paletteBtnTextColor,
+																		width: `calc(100% - ${
+																			ICON_DIV_WIDTH + 10
+																		}px)`,
 																	}}
-																	onClick={(e) => {
-																		e.preventDefault();
-																		e.stopPropagation();
-																		openPaletteFor(
-																			idx,
-																			e.currentTarget as HTMLElement
-																		);
-																	}}
-																	aria-label={`Open palette for ${(
-																		text || ""
-																	).trim()}`}
+																	className={`mr-3 bg-transparent truncate text-[18px] md:text-[19px] font-bold focus:outline-none ${
+																		!isIncluded
+																			? "line-through decoration-red-400 text-gray-400"
+																			: ""
+																	}`}
+																	maxLength={50}
+																/>
+																<div
+																	className={`${
+																		(text || "").trim() || forcedEmpty[idx]
+																			? "absolute flex"
+																			: "hidden"
+																	} items-center gap-3 right-3 md:right-2`}
+																	style={{ width: ICON_DIV_WIDTH }}
 																>
-																	<Palette
-																		size={16}
-																		color={paletteBtnTextColor}
+																	<input
+																		type="checkbox"
+																		aria-label={`Include ${(
+																			text || ""
+																		).trim()} on wheel`}
+																		onPointerDown={(e) => e.stopPropagation()}
+																		checked={isIncluded}
+																		onChange={(e) =>
+																			handleToggleInclude(idx, e.target.checked)
+																		}
+																		className="w-5 h-5 bg-white rounded"
 																	/>
-																	{/* <span className="text-xs">Color</span> */}
-																</button>
-
-																<div className="flex ">
 																	<button
 																		type="button"
-																		className="relative overflow-hidden flex items-center gap-2 px-3 py-1 rounded shadow bg-blue-200"
+																		onPointerDown={(e) => e.stopPropagation()}
 																		onClick={(e) => {
 																			e.preventDefault();
 																			e.stopPropagation();
-																			pendingPartitionIndexForFileRef.current =
-																				idx;
-																			entryFileInputRef.current?.click();
+																			setHideEmpty(false);
+																			clearLineDirect(idx);
+																			const ref = advancedMode
+																				? advancedInputRefs.current[idx]
+																				: listInputRefs.current[idx];
+																			if (ref) {
+																				try {
+																					ref.focus();
+																					ref.selectionStart =
+																						ref.selectionEnd = 0;
+																				} catch {}
+																			}
 																		}}
-																		aria-label={`Select image for ${(
+																		aria-label={`Clear line ${idx + 1}`}
+																		className="w-6 h-6 bg-white/90 rounded shadow-md flex items-center justify-center hover:bg-white p-0"
+																	>
+																		<X size={18} color="#404040" />
+																	</button>
+																	<button
+																		type="button"
+																		onPointerDown={(e) => e.stopPropagation()}
+																		onClick={(e) => {
+																			e.preventDefault();
+																			e.stopPropagation();
+																			setHideEmpty(false);
+																			deleteLine(idx);
+																		}}
+																		aria-label={`Delete line ${idx + 1}`}
+																		className="w-6 h-6 bg-red-100 text-red-600 rounded shadow-md flex items-center justify-center hover:bg-red-200 p-0"
+																	>
+																		<Trash2 size={16} />
+																	</button>
+																</div>
+															</div>
+															{/* Second inner div: palette button */}
+															<div className="flex gap-3 flex-wrap justify-between">
+																<div className="flex items-center gap-2">
+																	{/* Drag handle (grip) - acts as the draggable handle for reordering rows */}
+																	<button
+																		type="button"
+																		draggable
+																		onDragStart={(e) => {
+																			e.stopPropagation();
+																			dragIndexRef.current = idx;
+																			try {
+																				if (e.dataTransfer) {
+																					e.dataTransfer.setData(
+																						"text/plain",
+																						String(idx)
+																					);
+																					e.dataTransfer.effectAllowed = "move";
+																				}
+																			} catch {}
+																		}}
+																		onDragEnd={() => {
+																			dragIndexRef.current = null;
+																			setDragOverIndex(null);
+																		}}
+																		onPointerDown={(e) => e.stopPropagation()}
+																		aria-label={`Drag ${(
+																			(text || "") as string
+																		).trim()}`}
+																		className="flex items-center gap-2 px-3 py-1 rounded shadow bg-blue-200"
+																	>
+																		<Grip size={16} />
+																	</button>
+																	<button
+																		type="button"
+																		className="flex items-center gap-2 px-3 py-1 rounded shadow"
+																		style={{
+																			background: paletteBtnColor,
+																			color: paletteBtnTextColor,
+																		}}
+																		onClick={(e) => {
+																			e.preventDefault();
+																			e.stopPropagation();
+																			openPaletteFor(
+																				idx,
+																				e.currentTarget as HTMLElement
+																			);
+																		}}
+																		aria-label={`Open palette for ${(
 																			text || ""
 																		).trim()}`}
 																	>
+																		<Palette
+																			size={16}
+																			color={paletteBtnTextColor}
+																		/>
+																		{/* <span className="text-xs">Color</span> */}
+																	</button>
+
+																	<div className="flex ">
+																		<button
+																			type="button"
+																			className="relative overflow-hidden flex items-center gap-2 px-3 py-1 rounded shadow bg-blue-200"
+																			onClick={(e) => {
+																				e.preventDefault();
+																				e.stopPropagation();
+																				pendingPartitionIndexForFileRef.current =
+																					idx;
+																				entryFileInputRef.current?.click();
+																			}}
+																			aria-label={`Select image for ${(
+																				text || ""
+																			).trim()}`}
+																		>
+																			{(() => {
+																				const id = lineIdsRef.current?.[idx];
+																				const src = id
+																					? partitionImagesById[id] ??
+																					  partitionImages[idx]
+																					: partitionImages[idx];
+																				if (src) {
+																					return (
+																						<>
+																							<Image
+																								src={src}
+																								alt="thumb"
+																								fill
+																								className="object-cover rounded"
+																							/>
+																							{/* invisible placeholder to keep button inline dimensions equal to icon case */}
+																							<span
+																								className="w-4 h-4 inline-block"
+																								aria-hidden="true"
+																							/>
+																						</>
+																					);
+																				}
+																				return <ImageIcon size={16} />;
+																			})()}
+																		</button>
+																		{/* Delete button for advanced-mode: appears when a partition image exists */}
 																		{(() => {
-																			const id = lineIdsRef.current?.[idx];
-																			const src = id
-																				? partitionImagesById[id] ??
+																			const id2 = lineIdsRef.current?.[idx];
+																			const src2 = id2
+																				? partitionImagesById[id2] ??
 																				  partitionImages[idx]
 																				: partitionImages[idx];
-																			if (src) {
-																				return (
-																					<>
-																						<Image
-																							src={src}
-																							alt="thumb"
-																							fill
-																							className="object-cover rounded"
-																						/>
-																						{/* invisible placeholder to keep button inline dimensions equal to icon case */}
-																						<span
-																							className="w-4 h-4 inline-block"
-																							aria-hidden="true"
-																						/>
-																					</>
-																				);
-																			}
-																			return <ImageIcon size={16} />;
-																		})()}
-																	</button>
-																	{/* Delete button for advanced-mode: appears when a partition image exists */}
-																	{(() => {
-																		const id2 = lineIdsRef.current?.[idx];
-																		const src2 = id2
-																			? partitionImagesById[id2] ??
-																			  partitionImages[idx]
-																			: partitionImages[idx];
-																		if (!src2) return null;
-																		return (
-																			<button
-																				type="button"
-																				className="p-1 rounded-full scale-80 bg-gray-50 border border-gray-200 text-red-600 shadow z-10"
-																				onClick={(ev) => {
-																					ev.stopPropagation();
-																					ev.preventDefault();
-																					const idLocal =
-																						lineIdsRef.current?.[idx];
-																					if (idLocal) {
-																						partitionImageBlobUrlsByIdRef.current[
-																							idLocal
+																			if (!src2) return null;
+																			return (
+																				<button
+																					type="button"
+																					className="p-1 rounded-full scale-80 bg-gray-50 border border-gray-200 text-red-600 shadow z-10"
+																					onClick={(ev) => {
+																						ev.stopPropagation();
+																						ev.preventDefault();
+																						const idLocal =
+																							lineIdsRef.current?.[idx];
+																						if (idLocal) {
+																							partitionImageBlobUrlsByIdRef.current[
+																								idLocal
+																							] = null;
+																							partitionImageBitmapByIdRef.current[
+																								idLocal
+																							] = null;
+																							setPartitionImagesById((prev) => {
+																								const copy = { ...prev };
+																								delete copy[idLocal];
+																								return copy;
+																							});
+																						}
+																						partitionImageBlobUrlsRef.current[
+																							idx
 																						] = null;
-																						partitionImageBitmapByIdRef.current[
-																							idLocal
+																						partitionImageBitmapRefs.current[
+																							idx
 																						] = null;
-																						setPartitionImagesById((prev) => {
+																						setPartitionImages((prev) => {
 																							const copy = { ...prev };
-																							delete copy[idLocal];
+																							delete copy[idx];
 																							return copy;
 																						});
-																					}
-																					partitionImageBlobUrlsRef.current[
-																						idx
-																					] = null;
-																					partitionImageBitmapRefs.current[
-																						idx
-																					] = null;
-																					setPartitionImages((prev) => {
-																						const copy = { ...prev };
-																						delete copy[idx];
-																						return copy;
-																					});
-																					drawWheelRef.current?.();
-																				}}
-																				aria-label={`Remove image for ${(
-																					text || ""
-																				).trim()}`}
-																			>
-																				<X size={14} />
-																			</button>
-																		);
-																	})()}
+																						drawWheelRef.current?.();
+																					}}
+																					aria-label={`Remove image for ${(
+																						text || ""
+																					).trim()}`}
+																				>
+																					<X size={14} />
+																				</button>
+																			);
+																		})()}
+																	</div>
 																</div>
-															</div>
 
-															{/* Share button: same style as Image button, placed to the right */}
-															<button
-																type="button"
-																className="flex items-center gap-2 px-3 py-1 rounded shadow bg-blue-200"
-																onClick={(e) => {
-																	e.preventDefault();
-																	e.stopPropagation();
-																	// Open weight slider popover anchored to this button
-																	sliderAnchorRef.current =
-																		e.currentTarget as HTMLElement;
-																	setSliderOpenFor(idx);
-																}}
-																aria-label={`Share ${(text || "").trim()}`}
-															>
-																<span className="text-sm font-semibold">
-																	{percent} %
-																</span>
-																{/* <Percent size={16} /> */}
-																<span className="text-xs">Win</span>
-															</button>
+																{/* Share button: same style as Image button, placed to the right */}
+																<button
+																	type="button"
+																	className="flex items-center gap-2 px-3 py-1 rounded shadow bg-blue-200"
+																	onClick={(e) => {
+																		e.preventDefault();
+																		e.stopPropagation();
+																		// Open weight slider popover anchored to this button
+																		sliderAnchorRef.current =
+																			e.currentTarget as HTMLElement;
+																		setSliderOpenFor(idx);
+																	}}
+																	aria-label={`Share ${(text || "").trim()}`}
+																>
+																	<span className="text-sm font-semibold">
+																		{percent} %
+																	</span>
+																	{/* <Percent size={16} /> */}
+																	<span className="text-xs">Win</span>
+																</button>
+															</div>
+														</div>
+													);
+												})}
+												{/* Tap to Add label below the list — show when there are no rows or when last line is non-empty */}
+												{(renderLines.length === 0 ||
+													(renderLines.length > 0 &&
+														(
+															renderLines[renderLines.length - 1] || ""
+														).trim() !== "")) && (
+													<div className="mt-4">
+														<div className="text-gray-400 text-[26px] flex justify-center tracking-tight p-5 items-center opacity-50 select-none">
+															Tap to Add
 														</div>
 													</div>
-												);
-											})}
-											{/* Tap to Add label below the list — show when there are no rows or when last line is non-empty */}
-											{(renderLines.length === 0 ||
-												(renderLines.length > 0 &&
-													(renderLines[renderLines.length - 1] || "").trim() !==
-														"")) && (
-												<div className="mt-4">
-													<div className="text-gray-400 text-[26px] flex justify-center tracking-tight p-5 items-center opacity-50 select-none">
-														Tap to Add
-													</div>
-												</div>
-											)}
-											{/* Reset / Undo inside advanced container */}
-											<div className="absolute right-0 bottom-0 flex gap-2 px-4.5 py-2">
-												<button
-													type="button"
-													onClick={handleReset}
-													className="px-2 py-1 rounded bg-red-500 text-white text-sm hover:bg-red-600 shadow"
-												>
-													Reset
-												</button>
-												<button
-													type="button"
-													onClick={handleUndo}
-													disabled={!canUndo}
-													className="px-2 py-1 text-gray-50 rounded bg-[#404040] text-sm hover:bg-gray-300 disabled:opacity-30 disabled:cursor-not-allowed shadow"
-												>
-													Undo
-												</button>
+												)}
 											</div>
-										</div>
+
+											<div className="w-full flex justify-center gap-2 rounded-sm z-0 relative -mt-[4px]">
+												<div className="bg-gray-50 pb-2 pt-3 px-4 rounded-b-md flex gap-2 border-b-5 border-l-5 border-r-5 border-gray-300">
+													<button
+														type="button"
+														onClick={handleReset}
+														className="flex items-center gap-2 px-2 py- rounded bg-red-500 text-white text-sm hover:bg-red-600 shadow"
+													>
+														<Trash2 size={16} />
+														<span>Reset</span>
+													</button>
+													<button
+														type="button"
+														onClick={handleUndo}
+														disabled={!canUndo}
+														className="px-2 py-1 text-gray-50 rounded bg-[#404040] text-sm hover:bg-gray-500 disabled:opacity-30 disabled:cursor-not-allowed shadow"
+													>
+														Undo
+													</button>
+												</div>
+											</div>
+										</>
 									)}
 								</div>
 							</div>
+
 							<p
 								className="text-sm text-gray-500 mt-2"
 								style={getTextContrastStyles() || undefined}
