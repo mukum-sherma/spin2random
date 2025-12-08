@@ -1,0 +1,856 @@
+"use client";
+
+import {
+	useState,
+	useRef,
+	useEffect,
+	useLayoutEffect,
+	useCallback,
+	useMemo,
+} from "react";
+import dynamic from "next/dynamic";
+// using native textarea here so we can overlay per-line controls
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+									>
+									{/* Normal mode: single textarea representing all lines. */}
+									<textarea
+										ref={textareaRef}
+										value={names}
+										onChange={handleTextareaChange}
+										onKeyDown={() => handleKeyDownInTextarea()}
+										onClick={() => setTimeout(updateFocusedLine, 0)}
+										onSelect={() => setTimeout(updateFocusedLine, 0)}
+										onScroll={() => setControlsTick((t) => t + 1)}
+										aria-label="Edit names, one per line"
+										className="w-full resize-none bg-transparent text-[18px] md:text-[19px] font-bold focus:outline-none"
+										style={{
+											width: textareaSize.width
+												? textareaSize.width + "px"
+												: undefined,
+											height: textareaSize.height
+												? textareaSize.height + "px"
+												: undefined,
+											minHeight: "500px",
+											maxHeight: "900px",
+											overflowY: "auto",
+											paddingRight: ICON_DIV_WIDTH + 24,
+											whiteSpace: "pre-wrap",
+										}}
+									/>
+
+									{/* Overlay controls positioned per-line; shown when that line is focused and non-empty */}
+									{renderLines.map((ln, idx) => {
+										const text = ln || "";
+										const isIncluded = text.trim()
+											? includeMap[text.trim()] !== false
+											: false;
+										const showIcons = focusedLine === idx && text.trim() !== "";
+										const top = calcIconTop(textareaRef, idx);
+										return (
+											<div
+												key={`ta-icons-${idx}`}
+												style={{
+													position: "absolute",
+													right: 8,
+													top: top,
+													width: ICON_DIV_WIDTH,
+													display: showIcons ? "flex" : "none",
+													gap: 8,
+													alignItems: "center",
+												}},
+												onPointerDown={(e) => e.stopPropagation()}
+											>
+												<input
+													type="checkbox"
+													aria-label={`Include ${(text || "").trim()} on wheel`}
+													checked={isIncluded}
+													onPointerDown={(e) => e.stopPropagation()}
+													onChange={(e) => {
+													handleToggleInclude(idx, e.target.checked);
+													setTimeout(() => textareaRef.current?.focus(), 0);
+													}}
+													className="w-5 h-5 bg-white rounded"
+												/>
+												<button
+													type="button"
+													onPointerDown={(e) => e.stopPropagation()}
+													onClick={(e) => {
+													e.preventDefault();
+													e.stopPropagation();
+													handleClearLine(idx);
+													}}
+													aria-label={`Clear line ${idx + 1}`}
+													className="w-6 h-6 bg-white/90 rounded shadow-md flex items-center justify-center hover:bg-white p-0"
+												>
+														<X size={18} color="#404040" />
+													</button>
+												<button
+													type="button"
+													onPointerDown={(e) => e.stopPropagation()}
+													onClick={(e) => {
+													e.preventDefault();
+													e.stopPropagation();
+													deleteLine(idx);
+													}}
+													aria-label={`Delete line ${idx + 1}`}
+													className="w-6 h-6 bg-red-100 text-red-600 rounded shadow-md flex items-center justify-center hover:bg-red-200 p-0"
+												>
+														<Trash2 size={16} />
+													</button>
+											</div>
+											);
+										})}
+									"#27AE60",
+									"#16A085",
+									"#34495E",
+									"#95A5A6",
+									"#F1948A",
+									"#F8B88B",
+								],
+								[]
+							);
+
+	const openPaletteFor = useCallback((idx: number, anchor?: HTMLElement) => {
+		paletteAnchorRef.current = anchor ?? null;
+		setPaletteOpenFor(idx);
+	}, []);
+
+	const closePalette = useCallback(() => {
+		setPaletteOpenFor(null);
+		paletteAnchorRef.current = null;
+	}, []);
+
+	const handlePaletteSelect = useCallback(
+		(idx: number, color: string) => {
+			const id = lineIdsRef.current?.[idx];
+			if (id) {
+				setPartitionColorsById((prev) => ({ ...prev, [id]: color }));
+				// Also remove any legacy index-keyed color for this index
+				setPartitionColors((prev) => {
+					const copy = { ...prev };
+					delete copy[idx];
+					return copy;
+				});
+			} else {
+				setPartitionColors((prev) => ({ ...prev, [idx]: color }));
+			}
+			drawWheelRef.current?.();
+			closePalette();
+		},
+		[closePalette]
+	);
+
+	const handlePaletteReset = useCallback(
+		(idx: number) => {
+			const id = lineIdsRef.current?.[idx];
+			if (id) {
+				setPartitionColorsById((prev) => {
+					const copy = { ...prev };
+					delete copy[id];
+					return copy;
+				});
+				setPartitionColors((prev) => {
+					const copy = { ...prev };
+					delete copy[idx];
+					return copy;
+				});
+			} else {
+				setPartitionColors((prev) => {
+					const copy = { ...prev };
+					delete copy[idx];
+					return copy;
+				});
+			}
+			drawWheelRef.current?.();
+			closePalette();
+		},
+		[closePalette]
+	);
+
+	// Close on outside click or Escape
+	useEffect(() => {
+		if (paletteOpenFor === null) return;
+
+		const onDocDown = (ev: MouseEvent) => {
+			const tgt = ev.target as Node | null;
+			if (!tgt) return;
+			if (paletteRef.current && paletteRef.current.contains(tgt)) return;
+			if (paletteAnchorRef.current && paletteAnchorRef.current.contains(tgt))
+				return;
+			closePalette();
+		};
+
+		const onKey = (ev: KeyboardEvent) => {
+			if (ev.key === "Escape") closePalette();
+		};
+
+		document.addEventListener("mousedown", onDocDown);
+		document.addEventListener("keydown", onKey);
+
+		return () => {
+			document.removeEventListener("mousedown", onDocDown);
+			document.removeEventListener("keydown", onKey);
+		};
+	}, [paletteOpenFor, closePalette]);
+
+	// Reposition popover on scroll/resize
+	useEffect(() => {
+		if (paletteOpenFor === null) return;
+		let raf = 0;
+		const update = () => {
+			if (!paletteAnchorRef.current || !paletteRef.current) return;
+			const r = paletteAnchorRef.current.getBoundingClientRect();
+			const pop = paletteRef.current;
+			pop.style.position = "fixed";
+
+			// compute horizontal center anchored to button, then clamp so popover stays inside viewport
+			const popW = pop.offsetWidth || 160;
+			const desiredCenter = Math.round(r.left + r.width / 2);
+			const minCenter = Math.round(popW / 2) + 8;
+			const maxCenter = Math.round(window.innerWidth - popW / 2) - 8;
+			const clampedCenter = Math.max(
+				minCenter,
+				Math.min(maxCenter, desiredCenter)
+			);
+			pop.style.left = `${clampedCenter}px`;
+			// use translate to center horizontally
+			pop.style.transform = "translate(-50%, 0)";
+
+			// position below if space, otherwise above; ensure top is clamped into viewport
+			let top = Math.round(r.bottom + 8);
+			if (top + pop.offsetHeight > window.innerHeight - 8) {
+				// try above
+				top = Math.round(r.top - pop.offsetHeight - 8);
+			}
+			// final clamp
+			top = Math.max(
+				8,
+				Math.min(top, Math.max(8, window.innerHeight - pop.offsetHeight - 8))
+			);
+			pop.style.top = `${top}px`;
+			// make visible after positioning
+			pop.style.opacity = "1";
+		};
+
+		const tick = () => {
+			update();
+			raf = requestAnimationFrame(tick);
+		};
+
+		window.addEventListener("resize", update);
+		window.addEventListener("scroll", update, true);
+		tick();
+
+		return () => {
+			cancelAnimationFrame(raf);
+			window.removeEventListener("resize", update);
+			window.removeEventListener("scroll", update, true);
+		};
+	}, [paletteOpenFor]);
+
+	// Slider popover state for per-partition weight control
+	const [sliderOpenFor, setSliderOpenFor] = useState<number | null>(null);
+	const sliderRef = useRef<HTMLDivElement | null>(null);
+	const sliderAnchorRef = useRef<HTMLElement | null>(null);
+
+	// Text input for weight popover (string so user can type freely)
+	const [sliderWeightText, setSliderWeightText] = useState<string>("");
+
+	// Slider popover: close on outside click / Escape
+	useEffect(() => {
+		if (sliderOpenFor === null) return;
+		const onDocDown = (ev: MouseEvent) => {
+			const tgt = ev.target as Node | null;
+			if (!tgt) return;
+			if (sliderRef.current && sliderRef.current.contains(tgt)) return;
+			if (sliderAnchorRef.current && sliderAnchorRef.current.contains(tgt))
+				return;
+			setSliderOpenFor(null);
+			sliderAnchorRef.current = null;
+		};
+		const onKey = (ev: KeyboardEvent) => {
+			if (ev.key === "Escape") {
+				setSliderOpenFor(null);
+				sliderAnchorRef.current = null;
+			}
+		};
+		document.addEventListener("mousedown", onDocDown);
+		document.addEventListener("keydown", onKey);
+		return () => {
+			document.removeEventListener("mousedown", onDocDown);
+			document.removeEventListener("keydown", onKey);
+		};
+	}, [sliderOpenFor]);
+
+	// Keep the weight text input synced when a popover opens so the user sees
+	// the current numeric weight and can type freely.
+	useEffect(() => {
+		if (sliderOpenFor === null) {
+			setSliderWeightText("");
+			return;
+		}
+		const idx = sliderOpenFor as number;
+		const id = lineIdsRef.current?.[idx];
+		const current = id
+			? partitionWeightsByIdRef.current[id] ??
+			  partitionWeightsRef.current[idx] ??
+			  1
+			: partitionWeightsRef.current[idx] ?? 1;
+		setSliderWeightText(String(current));
+	}, [sliderOpenFor]);
+
+	// Reposition slider popover on scroll/resize when open
+	useEffect(() => {
+		if (sliderOpenFor === null) return;
+		let raf = 0;
+		const update = () => {
+			if (!sliderAnchorRef.current || !sliderRef.current) return;
+			const r = sliderAnchorRef.current.getBoundingClientRect();
+			const pop = sliderRef.current;
+			pop.style.position = "fixed";
+			const popW = pop.offsetWidth || 240;
+			const desiredCenter = Math.round(r.left + r.width / 2);
+			const minCenter = Math.round(popW / 2) + 8;
+			const maxCenter = Math.round(window.innerWidth - popW / 2) - 8;
+			const clampedCenter = Math.max(
+				minCenter,
+				Math.min(maxCenter, desiredCenter)
+			);
+			pop.style.left = `${clampedCenter}px`;
+			pop.style.transform = "translate(-50%, 0)";
+			let top = Math.round(r.bottom + 8);
+			if (top + pop.offsetHeight > window.innerHeight - 8)
+				top = Math.round(r.top - pop.offsetHeight - 8);
+			top = Math.max(
+				8,
+				Math.min(top, Math.max(8, window.innerHeight - pop.offsetHeight - 8))
+			);
+			pop.style.top = `${top}px`;
+			pop.style.opacity = "1";
+		};
+		const tick = () => {
+			update();
+			raf = requestAnimationFrame(tick);
+		};
+		window.addEventListener("resize", update);
+		window.addEventListener("scroll", update, true);
+		tick();
+		return () => {
+			cancelAnimationFrame(raf);
+			window.removeEventListener("resize", update);
+			window.removeEventListener("scroll", update, true);
+		};
+	}, [sliderOpenFor]);
+	const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+	const [showConfetti, setShowConfetti] = useState(false);
+	const [nameOrder, setNameOrder] = useState<NameOrder>("shuffle");
+	const [timerDuration, setTimerDuration] = useState(10);
+	const [backgroundSelection, setBackgroundSelection] =
+		useState<BackgroundChange | null>(null);
+	// Track when a fullpage image is applied to the body and its computed contrast color
+	const [bodyBgIsImage, setBodyBgIsImage] = useState(false);
+	// Track when a body background color (not image) is applied so we can apply the
+	// same softened contrast/stroke/shadow styles as we do for fullpage images.
+	const [bodyBgIsColor, setBodyBgIsColor] = useState(false);
+	const [bodyContrast, setBodyContrast] = useState<string>("");
+	// softened text color (reduced contrast) applied to body and used for text color
+	const [bodyTextColor, setBodyTextColor] = useState<string>("");
+	// When the user selects an image for the wheel, we store its src here
+	const [wheelImageSrc, setWheelImageSrc] = useState<string | null>(null);
+	const [wheelTextColor, setWheelTextColor] = useState<string>("#000");
+	// map of name (trimmed) -> include boolean. If true (or missing) name is included on wheel.
+	const [includeMap, setIncludeMap] = useState<Record<string, boolean>>({});
+
+	// Initialize includeMap from initial names (preserve any existing flags)
+	useEffect(() => {
+		setIncludeMap((prev) => {
+			const lines = names.split("\n").map((l) => l.trim());
+			const next: Record<string, boolean> = {};
+			for (const ln of lines) {
+				if (!ln) continue;
+				next[ln] = prev[ln] ?? true;
+			}
+			return next;
+		});
+	}, [names]);
+	// page text color state removed; we set document.body.style.color directly when needed
+
+	// Compute a simple contrast color (black or white) from an ImageBitmap by
+	// sampling pixels and computing average luminance.
+	const computeContrastFromBitmap = (bmp: ImageBitmap) => {
+		try {
+			const sampleSize = 64; // draw into a small canvas for speed
+			const off = document.createElement("canvas");
+			off.width = sampleSize;
+			off.height = sampleSize;
+			const ctx = off.getContext("2d");
+			if (!ctx) return "#000";
+			// draw the bitmap scaled to sampleSize
+			ctx.drawImage(bmp, 0, 0, sampleSize, sampleSize);
+			const data = ctx.getImageData(0, 0, sampleSize, sampleSize).data;
+			let total = 0;
+			let count = 0;
+			// sample every 4th pixel to be faster
+			for (let i = 0; i < data.length; i += 16) {
+				const r = data[i];
+				const g = data[i + 1];
+				const b = data[i + 2];
+				// standard luminance
+				const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+				total += lum;
+				count += 1;
+			}
+			const avg = total / Math.max(1, count);
+			return avg < 128 ? "#ffffff" : "#000000";
+		} catch (err) {
+			console.warn("contrast computation failed:", err);
+			return "#000000";
+		}
+	};
+
+	// Compute contrast (black or white) from a CSS color string (hex or rgb).
+	const computeContrastFromColor = (color: string) => {
+		try {
+			let r = 0,
+				g = 0,
+				b = 0;
+			const s = color.trim().toLowerCase();
+			if (s.startsWith("#")) {
+				let hex = s.slice(1);
+				if (hex.length === 3) {
+					hex = hex
+						.split("")
+						.map((c) => c + c)
+						.join("");
+				}
+				if (hex.length === 6) {
+					r = parseInt(hex.slice(0, 2), 16);
+					g = parseInt(hex.slice(2, 4), 16);
+					b = parseInt(hex.slice(4, 6), 16);
+				}
+			} else if (s.startsWith("rgb(") || s.startsWith("rgba(")) {
+				const nums = s.replace(/rgba?\(|\)|\s/g, "").split(",");
+				r = parseInt(nums[0], 10) || 0;
+				g = parseInt(nums[1], 10) || 0;
+				b = parseInt(nums[2], 10) || 0;
+			} else {
+				// Fallback: create a temporary element to resolve color to rgb
+				const el = document.createElement("div");
+				el.style.color = color;
+				document.body.appendChild(el);
+				const cs = window.getComputedStyle(el).color;
+				document.body.removeChild(el);
+				const nums = cs.replace(/rgba?\(|\)|\s/g, "").split(",");
+				r = parseInt(nums[0], 10) || 0;
+				g = parseInt(nums[1], 10) || 0;
+				b = parseInt(nums[2], 10) || 0;
+			}
+			const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+			return lum < 128 ? "#ffffff" : "#000000";
+		} catch (err) {
+			console.warn("Failed to compute contrast from color:", color, err);
+			return "#000000";
+		}
+	};
+
+	const getTextContrastStyles = useCallback(():
+		| React.CSSProperties
+		| undefined => {
+		// Apply contrast styles when either a fullpage image or a body color is active.
+		if (!bodyBgIsImage && !bodyBgIsColor) return undefined;
+		const c = (bodyContrast || "").toLowerCase();
+		const isWhite = c === "#ffffff" || c === "#fff" || c.includes("white");
+		// Softer stroke and shadow for a pleasing, reduced contrast look
+		const stroke = isWhite ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.62)";
+		const blur = isWhite
+			? "0 2px 6px rgba(0,0,0,0.42)"
+			: "0 2px 6px rgba(255,255,255,0.18)";
+		const outline = `${stroke} -1px -1px 0, ${stroke} 1px -1px 0, ${stroke} -1px 1px 0, ${stroke} 1px 1px 0`;
+		const textShadow = `${outline}, ${blur}`;
+		return {
+			color: bodyTextColor || undefined,
+			textShadow,
+		} as React.CSSProperties;
+	}, [bodyBgIsImage, bodyBgIsColor, bodyContrast, bodyTextColor]);
+
+	const getButtonContrastStyles = useCallback(():
+		| React.CSSProperties
+		| undefined => {
+		// Apply contrast styles when either a fullpage image or a body color is active.
+		if (!bodyBgIsImage && !bodyBgIsColor) return undefined;
+		const c = (bodyContrast || "").toLowerCase();
+		const isWhite = c === "#ffffff" || c === "#fff" || c.includes("white");
+		// Use a gentler border and shadow that still contrasts but is visually pleasing
+		const stroke = isWhite ? "rgba(0,0,0,0.62)" : "rgba(255,255,255,0.65)";
+		return {
+			border: `1px solid ${stroke}`,
+			boxShadow: isWhite
+				? `0 6px 18px rgba(0,0,0,0.32)`
+				: `0 6px 18px rgba(0,0,0,0.08)`,
+		} as React.CSSProperties;
+	}, [bodyBgIsImage, bodyContrast]);
+	const [winningSound, setWinningSound] = useState("small-group-applause");
+	const [spinSound, setSpinSound] = useState("single-spin");
+	const [isFullscreen, setIsFullscreen] = useState(false);
+	const [wheelTitle, setWheelTitle] = useState("Enter an Awesome Title");
+	const [isEditingTitle, setIsEditingTitle] = useState(false);
+	const [tempTitle, setTempTitle] = useState("Enter an Awesome Title");
+	const canvasRef = useRef<HTMLCanvasElement>(null);
+	const wheelSectionRef = useRef<HTMLDivElement>(null);
+	// loaded image bitmap for faster drawing into the canvas (per-segment clipping)
+	const wheelImageBitmapRef = useRef<ImageBitmap | null>(null);
+	const audioBufferRef = useRef<AudioBuffer | null>(null);
+	const audioContextRef = useRef<AudioContext | null>(null);
+	const lastSegmentRef = useRef<number>(-1);
+	// dynamic deceleration extension (ms) used to allow the wheel to keep slowing until speed ~ 0
+	const decelExtensionRef = useRef<number>(0);
+	const drumBufferRef = useRef<AudioBuffer | null>(null);
+	const winningBuffersRef = useRef<Map<string, AudioBuffer>>(new Map());
+	const spinBuffersRef = useRef<Map<string, AudioBuffer>>(new Map());
+
+	// textarea controls for per-line delete icon
+	const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+	// refs for advanced-mode per-line inputs, keyed by original index after render
+	const advancedInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+	// refs for names-list per-line inputs (non-advanced mode)
+	const listInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+
+	// Drag-and-drop: track the index being dragged and highlight drop target
+	const dragIndexRef = useRef<number | null>(null);
+	const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+	// simple undo history for textarea content
+	const historyRef = useRef<string[]>([names]);
+	const historyIndexRef = useRef<number>(0);
+	const MAX_HISTORY = 200;
+	const [canUndo, setCanUndo] = useState(false);
+	const [focusedLine, setFocusedLine] = useState<number | null>(null);
+	// controlsTick forces a rerender when textarea scroll or similar events
+	// occur so per-line control positions (computed by calcIconTop) update.
+	const [controlsTick, setControlsTick] = useState(0);
+	// Advanced mode: show extra per-line UI blocks below each textarea line
+	const [advancedMode, setAdvancedMode] = useState(false);
+
+	// measured textarea size (used to render identical-size div in Advanced mode)
+	const [textareaSize, setTextareaSize] = useState<{
+		width: number;
+		height: number;
+	}>({
+		width: 0,
+		height: 0,
+	});
+
+	const measureTextarea = () => {
+		const el = textareaRef.current;
+		if (!el) return { width: 0, height: 0 };
+		return { width: el.clientWidth, height: el.clientHeight };
+	};
+
+	const adjustTextareaHeight = () => {
+		const el = textareaRef.current;
+		if (!el) return;
+		// reset to auto to measure content height
+		el.style.height = "auto";
+		const scrollH = el.scrollHeight;
+		const maxH = 800;
+		if (scrollH <= maxH) {
+			el.style.height = scrollH + "px";
+			el.style.overflowY = "hidden";
+		} else {
+			el.style.height = maxH + "px";
+			el.style.overflowY = "auto";
+		}
+	};
+
+	useLayoutEffect(() => {
+		// measure after DOM mutations; only set state when size actually changes
+		const apply = () => {
+			// ensure textarea height matches contents before measuring
+			adjustTextareaHeight();
+			const s = measureTextarea();
+			if (!s) return;
+			setTextareaSize((prev) => {
+				if (prev.width === s.width && prev.height === s.height) return prev;
+				return s;
+			});
+		};
+
+		apply();
+		const onResize = () => apply();
+		window.addEventListener("resize", onResize);
+		return () => window.removeEventListener("resize", onResize);
+	}, [advancedMode, names, controlsTick]);
+
+	const calcIconTop = (ta?: HTMLTextAreaElement | null, lineIdx?: number) => {
+		const el = ta ?? textareaRef.current;
+		const idx = lineIdx ?? focusedLine ?? 0;
+		if (!el) return 0;
+		try {
+			const style = window.getComputedStyle(el);
+			let lineHeight = parseFloat(style.lineHeight || "");
+			if (isNaN(lineHeight) || lineHeight === 0) {
+				const fontSize = parseFloat(style.fontSize || "16") || 16;
+				lineHeight = fontSize * 1.2;
+			}
+			const paddingTop = parseFloat(style.paddingTop || "0") || 0;
+			const y = paddingTop + idx * lineHeight - el.scrollTop + 4;
+			const max = el.clientHeight - lineHeight;
+			return Math.max(4, Math.min(max, y));
+		} catch {
+			return 0;
+		}
+	};
+
+	const getLineHeight = () => {
+		const el = textareaRef.current;
+		if (!el) return 20;
+		try {
+			const style = window.getComputedStyle(el);
+			let lineHeight = parseFloat(style.lineHeight || "");
+			if (isNaN(lineHeight) || lineHeight === 0) {
+				const fontSize = parseFloat(style.fontSize || "16") || 16;
+				lineHeight = fontSize * 1.2;
+			}
+			return lineHeight;
+		} catch {
+			return 20;
+		}
+	};
+
+	const updateFocusedLine = () => {
+		const el = textareaRef.current;
+		if (!el) {
+			setFocusedLine(null);
+			return;
+		}
+		const sel = el.selectionStart ?? 0;
+		const idx = el.value.slice(0, sel).split("\n").length - 1;
+
+		// If the cursor moved to a new line, remove any other empty lines
+		// except for the current line. This keeps the list compact when
+		// the user navigates to a fresh line.
+		const prevIdx = focusedLine;
+		if (prevIdx !== idx) {
+			const lines = el.value.split("\n");
+			// detect empty lines (whitespace-only) excluding current idx
+			const emptyOthers = lines.some((l, i) => i !== idx && l.trim() === "");
+			if (emptyOthers) {
+				// compute new names with other empty lines removed
+				let charPos = 0; // new caret position after compaction
+				const kept: string[] = [];
+				for (let i = 0; i < lines.length; i++) {
+					const isEmpty = lines[i].trim() === "";
+					if (isEmpty && i !== idx) continue;
+					// if this is before the original idx, add to charPos
+					if (i < idx) {
+						charPos += lines[i].length + 1; // include newline
+					}
+					kept.push(lines[i]);
+				}
+				const newValue = kept.join("\n");
+				setNames(newValue);
+				// restore caret roughly to the same logical line
+				setTimeout(() => {
+					if (textareaRef.current) {
+						textareaRef.current.focus();
+						textareaRef.current.selectionStart = Math.min(
+							charPos,
+							textareaRef.current.value.length
+						);
+						textareaRef.current.selectionEnd =
+							textareaRef.current.selectionStart;
+						// update focused line state after change
+						const sel2 = textareaRef.current.selectionStart ?? 0;
+						const newIdx =
+							textareaRef.current.value.slice(0, sel2).split("\n").length - 1;
+						setFocusedLine(newIdx);
+						setControlsTick((t) => t + 1);
+					}
+				}, 0);
+				return;
+			}
+		}
+
+		setFocusedLine(idx);
+		// We no longer toggle a single focused-line control. Controls for every
+		// non-empty line are rendered; force a rerender so positions update.
+		setControlsTick((t) => t + 1);
+	};
+
+	const handleKeyDownInTextarea = () => {
+		// update caret-derived state after the key event
+		setTimeout(updateFocusedLine, 0);
+	};
+
+	const pushHistory = (value: string) => {
+		const h = historyRef.current;
+		let idx = historyIndexRef.current;
+		// if we are not at the end, truncate forward history
+		if (idx < h.length - 1) {
+			h.splice(idx + 1);
+		}
+		h.push(value);
+		idx = h.length - 1;
+		// cap history
+		if (h.length > MAX_HISTORY) {
+			h.shift();
+			idx = h.length - 1;
+		}
+		historyIndexRef.current = idx;
+		setCanUndo(h.length > 1 && historyIndexRef.current > 0);
+	};
+
+	const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+		const v = e.target.value;
+		// push new state into history
+		// push new state into history
+		pushHistory(v);
+		setNames(v);
+		// Sync includeMap: preserve existing include flags for matching trimmed names,
+		// default to true for new names.
+		setIncludeMap((prev) => {
+			const lines = v.split("\n").map((l) => l.trim());
+			const next: Record<string, boolean> = {};
+			for (const ln of lines) {
+				if (!ln) continue;
+				next[ln] = prev[ln] ?? true;
+			}
+			return next;
+		});
+		// update caret/hover derived UI
+		setTimeout(updateFocusedLine, 0);
+	};
+
+	const handleUndo = () => {
+		const h = historyRef.current;
+		let idx = historyIndexRef.current;
+		if (idx <= 0) return;
+		idx -= 1;
+		historyIndexRef.current = idx;
+		const prev = h[idx] ?? "";
+		setNames(prev);
+		setCanUndo(historyRef.current.length > 1 && historyIndexRef.current > 0);
+		setTimeout(updateFocusedLine, 0);
+	};
+
+	const handleReset = () => {
+		// push empty state and apply
+		pushHistory("");
+		setNames("");
+		setCanUndo(historyRef.current.length > 1 && historyIndexRef.current > 0);
+		setTimeout(updateFocusedLine, 0);
+	};
+
+	const handleClearLine = (index: number) => {
+		const el = textareaRef.current;
+		if (!el) return;
+		const lines = el.value.split("\n");
+		const clearedName = (lines[index] || "").trim();
+		lines[index] = "";
+		if (clearedName) {
+			setIncludeMap((prev) => {
+				const copy = { ...prev };
+				delete copy[clearedName];
+				return copy;
+			});
+		}
+		const newValue = lines.join("\n");
+		setNames(newValue);
+		// position caret at start of the cleared line
+		const pos = lines.slice(0, index).reduce((acc, l) => acc + l.length + 1, 0);
+		setTimeout(() => {
+			if (textareaRef.current) {
+				textareaRef.current.focus();
+				textareaRef.current.selectionStart = pos;
+				textareaRef.current.selectionEnd = pos;
+				updateFocusedLine();
+			}
+		}, 0);
+	};
+
+	const handleToggleInclude = (index: number, checked: boolean) => {
+		const lines = names.split("\n").map((l) => l.trim());
+		const name = lines[index] ?? "";
+		if (!name) return;
+		setIncludeMap((prev) => ({ ...prev, [name]: checked }));
+	};
+
+	// Clear a line's text without relying on the textarea element (used in Advanced mode)
+	const clearLineDirect = (index: number) => {
+		setNames((prev) => {
+			const lines = prev.split("\n");
+			const clearedName = (lines[index] || "").trim();
+			lines[index] = "";
+			if (clearedName) {
+				setIncludeMap((prevMap) => {
+					const copy = { ...prevMap };
+					delete copy[clearedName];
+					return copy;
+				});
+			}
+
+			// In Advanced mode, clearing should keep the inner row visible.
+			if (advancedMode) {
+				setForcedEmpty((prev) => ({ ...prev, [index]: true }));
+				setHideEmpty(false);
+			}
+
+			// after clearing, focus at start of this input
+			setTimeout(() => {
+				const ref = advancedMode
+					? advancedInputRefs.current[index]
+					: listInputRefs.current[index];
+				if (ref) {
+					ref.focus();
+					ref.selectionStart = ref.selectionEnd = 0;
+				}
+				updateFocusedLine();
+				setControlsTick((t) => t + 1);
+			}, 0);
+			return lines.join("\n");
+		});
+	};
+
+	// Insert an empty line after the given index and focus the new input.
+	// If the canonical `names` string was empty before insertion, mark the
+	// new row as forced visible so Advanced-mode auto-hide does not remove it.
+	const insertLineAfter = (index: number) => {
+		const wasEmpty = (names || "").trim() === "";
+
+		setNames((prev) => {
+			const lines = prev.split("\n");
+			lines.splice(index + 1, 0, "");
+			const next = lines.join("\n");
+			pushHistory(next);
+			return next;
+		});
+
+		// If we inserted into an entirely empty names string OR we're in
+		// Advanced mode, mark the new row as a forced-empty so the
+		// advanced-controls div is rendered even when the text is empty.
+		if (wasEmpty || advancedMode) {
+			const newIndex = index + 1;
+			setForcedEmpty((prev) => ({ ...prev, [newIndex]: true }));
+			setHideEmpty(false);
+		}
+
+		setTimeout(() => {
+			const newIndex = index + 1;
+			const ref = advancedMode
+				? advancedInputRefs.current[newIndex]
+				: listInputRefs.current[newIndex];
+			if (ref) {
+				ref.focus();
+				const len = ref.value.length;
+				ref.selectionStart = ref.selectionEnd = len;
+			}
+			updateFocusedLine();
+			setControlsTick((t) => t + 1);
+		}, 0);
+	};
+

@@ -36,7 +36,7 @@ export default function AboutUsPage() {
 			<div className="min-h-screen py-12 px-4">
 				<div className="container mx-auto max-w-4xl">
 					<h1
-						className={`text-3xl font-bold text-slate-600  tracking-wider mb-6 ${adalima.className}`}
+						className={`text-3xl text-slate-600  tracking-wider mb-6 ${adalima.className}`}
 					>
 						About SpinWheelQuiz
 					</h1>

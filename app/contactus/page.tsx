@@ -75,7 +75,7 @@ export default function ContactUsPage() {
 			<div className="min-h-screen py-12 px-4">
 				<div className="container mx-auto max-w-2xl">
 					<h1
-						className={`text-3xl font-bold text-slate-600  tracking-wide mb-4 ${adalima.className}`}
+						className={`text-3xl text-slate-600  tracking-wide mb-4 ${adalima.className}`}
 					>
 						Contact Us
 					</h1>

@@ -556,8 +556,7 @@ export default function Home() {
 	const measureTextarea = () => {
 		const el = textareaRef.current;
 		if (!el) return { width: 0, height: 0 };
-		const rect = el.getBoundingClientRect();
-		return { width: rect.width, height: el.clientHeight };
+		return { width: el.clientWidth, height: el.clientHeight };
 	};
 
 	const adjustTextareaHeight = () => {
@@ -631,32 +630,6 @@ export default function Home() {
 		}
 	};
 
-	const getTextareaPaddingLeft = () => {
-		const el = textareaRef.current;
-		if (!el) return 8;
-		try {
-			const style = window.getComputedStyle(el);
-			return parseFloat(style.paddingLeft || "8") || 8;
-		} catch {
-			return 8;
-		}
-	};
-
-	const measureLineWidth = (text: string) => {
-		const el = textareaRef.current;
-		const canvas = document.createElement("canvas");
-		const ctx = canvas.getContext("2d");
-		if (!ctx || !el) return Math.max(12, text.length * 9 + 4);
-		const style = window.getComputedStyle(el);
-		const fontStyle = style.fontStyle || "normal";
-		const fontWeight = style.fontWeight || "400";
-		const fontSize = style.fontSize || "18px";
-		const fontFamily = style.fontFamily || "sans-serif";
-		ctx.font = `${fontStyle} ${fontWeight} ${fontSize} ${fontFamily}`;
-		const w = ctx.measureText(text).width;
-		return Math.max(12, w + 4);
-	};
-
 	const updateFocusedLine = () => {
 		const el = textareaRef.current;
 		if (!el) {
@@ -666,52 +639,48 @@ export default function Home() {
 		const sel = el.selectionStart ?? 0;
 		const idx = el.value.slice(0, sel).split("\n").length - 1;
 
-		// In normal mode, allow native textarea behavior (including multiple
-		// consecutive empty lines). Only compact empty lines when advanced mode.
-		if (advancedMode) {
-			// If the cursor moved to a new line, remove any other empty lines
-			// except for the current line. This keeps the list compact when
-			// the user navigates to a fresh line.
-			const prevIdx = focusedLine;
-			if (prevIdx !== idx) {
-				const lines = el.value.split("\n");
-				// detect empty lines (whitespace-only) excluding current idx
-				const emptyOthers = lines.some((l, i) => i !== idx && l.trim() === "");
-				if (emptyOthers) {
-					// compute new names with other empty lines removed
-					let charPos = 0; // new caret position after compaction
-					const kept: string[] = [];
-					for (let i = 0; i < lines.length; i++) {
-						const isEmpty = lines[i].trim() === "";
-						if (isEmpty && i !== idx) continue;
-						// if this is before the original idx, add to charPos
-						if (i < idx) {
-							charPos += lines[i].length + 1; // include newline
-						}
-						kept.push(lines[i]);
+		// If the cursor moved to a new line, remove any other empty lines
+		// except for the current line. This keeps the list compact when
+		// the user navigates to a fresh line.
+		const prevIdx = focusedLine;
+		if (prevIdx !== idx) {
+			const lines = el.value.split("\n");
+			// detect empty lines (whitespace-only) excluding current idx
+			const emptyOthers = lines.some((l, i) => i !== idx && l.trim() === "");
+			if (emptyOthers) {
+				// compute new names with other empty lines removed
+				let charPos = 0; // new caret position after compaction
+				const kept: string[] = [];
+				for (let i = 0; i < lines.length; i++) {
+					const isEmpty = lines[i].trim() === "";
+					if (isEmpty && i !== idx) continue;
+					// if this is before the original idx, add to charPos
+					if (i < idx) {
+						charPos += lines[i].length + 1; // include newline
 					}
-					const newValue = kept.join("\n");
-					setNames(newValue);
-					// restore caret roughly to the same logical line
-					setTimeout(() => {
-						if (textareaRef.current) {
-							textareaRef.current.focus();
-							textareaRef.current.selectionStart = Math.min(
-								charPos,
-								textareaRef.current.value.length
-							);
-							textareaRef.current.selectionEnd =
-								textareaRef.current.selectionStart;
-							// update focused line state after change
-							const sel2 = textareaRef.current.selectionStart ?? 0;
-							const newIdx =
-								textareaRef.current.value.slice(0, sel2).split("\n").length - 1;
-							setFocusedLine(newIdx);
-							setControlsTick((t) => t + 1);
-						}
-					}, 0);
-					return;
+					kept.push(lines[i]);
 				}
+				const newValue = kept.join("\n");
+				setNames(newValue);
+				// restore caret roughly to the same logical line
+				setTimeout(() => {
+					if (textareaRef.current) {
+						textareaRef.current.focus();
+						textareaRef.current.selectionStart = Math.min(
+							charPos,
+							textareaRef.current.value.length
+						);
+						textareaRef.current.selectionEnd =
+							textareaRef.current.selectionStart;
+						// update focused line state after change
+						const sel2 = textareaRef.current.selectionStart ?? 0;
+						const newIdx =
+							textareaRef.current.value.slice(0, sel2).split("\n").length - 1;
+						setFocusedLine(newIdx);
+						setControlsTick((t) => t + 1);
+					}
+				}, 0);
+				return;
 			}
 		}
 
@@ -817,41 +786,6 @@ export default function Home() {
 		const name = lines[index] ?? "";
 		if (!name) return;
 		setIncludeMap((prev) => ({ ...prev, [name]: checked }));
-	};
-
-	const focusTextareaLineStart = (index: number) => {
-		const el = textareaRef.current;
-		if (!el) return;
-		const lines = el.value.split("\n");
-		const pos = lines.slice(0, index).reduce((acc, l) => acc + l.length + 1, 0);
-		const caret = Math.min(pos, el.value.length);
-		setTimeout(() => {
-			if (!textareaRef.current) return;
-			textareaRef.current.focus();
-			textareaRef.current.selectionStart = caret;
-			textareaRef.current.selectionEnd = caret;
-			updateFocusedLine();
-		}, 0);
-	};
-
-	const clearTextareaLine = (index: number) => {
-		setNames((prev) => {
-			const lines = prev.split("\n");
-			const clearedName = (lines[index] || "").trim();
-			lines[index] = "";
-			if (clearedName) {
-				setIncludeMap((prevMap) => {
-					const copy = { ...prevMap };
-					delete copy[clearedName];
-					return copy;
-				});
-			}
-			const next = lines.join("\n");
-			pushHistory(next);
-			return next;
-		});
-		focusTextareaLineStart(index);
-		setControlsTick((t) => t + 1);
 	};
 
 	// Clear a line's text without relying on the textarea element (used in Advanced mode)
@@ -960,11 +894,17 @@ export default function Home() {
 	) => {
 		if (e.key === "Enter" && !e.shiftKey) {
 			e.preventDefault();
-			// If not in Advanced mode and caret is at start, insert above current line
+			const input = e.currentTarget as HTMLInputElement;
+			// If the current line is empty (or only whitespace), do not create a new line
+			try {
+				if ((input.value || "").trim().length === 0) return;
+			} catch {}
+
+			// In Normal mode: if caret is at the very start, insert before; otherwise insert after
 			if (!advancedMode) {
 				try {
-					const caret =
-						(e.currentTarget as HTMLInputElement).selectionStart ?? 0;
+					const caret = input.selectionStart ?? 0;
+					alert("caret is " + caret);
 					if (caret === 0) {
 						insertLineBefore(index);
 						return;
@@ -1845,7 +1785,7 @@ export default function Home() {
 					if (typeof maybePicker.showPicker === "function")
 						maybePicker.showPicker();
 					else el.click();
-				} catch (_e) {
+				} catch {
 					// ignore
 				}
 			} catch (err) {
@@ -3155,6 +3095,15 @@ export default function Home() {
 							/>
 						))}
 					</div>
+					<div className="mt-2 flex gap-2 justify-center">
+						<button
+							type="button"
+							className="px-2 py-1 text-sm rounded bg-gray-100 hover:bg-gray-200 border"
+							onClick={() => handlePaletteReset(paletteOpenFor as number)}
+						>
+							Reset
+						</button>
+					</div>
 				</div>
 			)}
 			<style jsx>{`
@@ -3833,108 +3782,125 @@ export default function Home() {
 								{/* Normal mode  */}
 								<div className="relative flex-1 w-full">
 									{!advancedMode ? (
-										<div className="relative w-full">
-											<textarea
-												ref={textareaRef}
-												value={names}
-												onChange={handleTextareaChange}
-												onKeyDown={() => handleKeyDownInTextarea()}
-												onClick={() => setTimeout(updateFocusedLine, 0)}
-												onSelect={() => setTimeout(updateFocusedLine, 0)}
-												onScroll={() => setControlsTick((t) => t + 1)}
-												aria-label="Edit names, one per line"
-												className="w-full resize-none whitespace-pre rounded-[7px] bg-gray-50 text-gray-800 text-[18px] md:text-[19px] font-bold border-4 shadow-inner border-gray-300 px-3 pt-3 pb-8 leading-7 focus:outline-none"
+										<div className="w-full">
+											<div
+												role="region"
+												aria-label="Names list"
+												className="w-full  whitespace-pre rounded-[7px] bg-gray-50 text-gray-800 overflow-auto text-[18px] md:text-[19px] font-bold border-4 shadow-inner border-gray-300 px-3 pt-3 pb-8 leading-7 relative"
+												/* Require double-click on empty area (outside inner divs)
+												   to focus the last input or create a new one. Single click
+												   no longer creates/focuses to avoid accidental mobile keyboards. */
+												onPointerDown={(e) => {
+													// If the event is inside a line, let that event proceed.
+													if (isEventInsideLine(e)) return;
+													// Otherwise do nothing on single pointer down.
+												}}
+												onClick={(e) => {
+													// Only react when double-click occurred outside inner line elements
+													// Walk up from target to container to detect a data-line-index
+													let node = e.target as HTMLElement | null;
+													const container =
+														e.currentTarget as HTMLElement | null;
+													while (node && node !== container) {
+														if (
+															node.dataset &&
+															typeof node.dataset.lineIndex !== "undefined"
+														) {
+															// double-click was inside a line; ignore
+															return;
+														}
+														node = node.parentElement;
+													}
+
+													e.stopPropagation();
+
+													// If no rendered lines exist, create one
+													if (renderLines.length === 0) {
+														setHideEmpty(false);
+														insertLineAfter(-1);
+														return;
+													}
+
+													// Focus the last existing inner input
+													const lastIdx = renderLines.length - 1;
+													const ref = advancedMode
+														? advancedInputRefs.current[lastIdx]
+														: listInputRefs.current[lastIdx];
+													if (ref) {
+														try {
+															ref.focus();
+															const len = ref.value.length;
+															ref.selectionStart = ref.selectionEnd = len;
+														} catch {}
+													} else {
+														// Fallback: if no ref found, create a new empty line
+														insertLineAfter(lastIdx);
+													}
+												}}
 												style={{
-													width: "100%",
+													// height: Math.min(
+													// 	900,
+													// 	Math.max(600, names.split("\n").length * 42 + 24)
+													// ),
+													// overflowY: "auto",
+													width: textareaSize.width
+														? textareaSize.width + "px"
+														: undefined,
 													height: textareaSize.height
 														? textareaSize.height + "px"
 														: undefined,
 													minHeight: "500px",
 													maxHeight: "900px",
 													overflowY: "auto",
-													paddingRight: ICON_DIV_WIDTH + 24,
+													paddingBottom: "50px",
 												}}
-											/>
-
-											<div className="absolute left-0 top-0 right-0 bottom-0 pointer-events-none">
+											>
 												{renderLines.map((ln, idx) => {
-													const trimmed = (ln || "").trim();
-													if (!trimmed) return null;
-													const top = calcIconTop(textareaRef.current, idx);
-													const lineHeight = getLineHeight();
-													const isIncluded = includeMap[trimmed] !== false;
-													const paddingLeft = getTextareaPaddingLeft();
-													const textWidth = measureLineWidth(trimmed);
-													const showControls =
-														focusedLine === idx && trimmed.length > 0;
-													const maxStrikeWidth = Math.max(
-														0,
-														(textareaRef.current?.clientWidth ||
-															textareaSize.width ||
-															0) -
-															paddingLeft -
-															(ICON_DIV_WIDTH + 16)
-													);
-													const strikeWidth = Math.max(
-														12,
-														Math.min(
-															textWidth,
-															maxStrikeWidth > 0 ? maxStrikeWidth : textWidth
-														)
-													);
+													const text = ln;
+													const isIncluded = (text || "").trim()
+														? includeMap[(text || "").trim()] !== false
+														: false;
 													return (
 														<div
-															key={`overlay-${idx}`}
+															key={`line-div-${idx}`}
 															data-line-index={idx}
-															className="pointer-events-none right-3"
-															style={{
-																position: "absolute",
-																left: 0,
-																top: 0,
-															}}
+															className="relative flex items-center justify-between gap-2 mb-1 py-1 w-full flex-nowrap"
 														>
-															{!isIncluded ? (
-																<>
-																	<div
-																		className="pointer-events-none"
-																		style={{
-																			position: "absolute",
-																			left: `${paddingLeft}px`,
-																			top: `${top}px`,
-																			width: `${strikeWidth}px`,
-																			height: `${lineHeight}px`,
-																			background: "rgba(255,255,255,0.6)",
-																			borderRadius: "3px",
-																			mixBlendMode: "normal",
-																		}}
-																	/>
-																	<div
-																		className="pointer-events-none"
-																		style={{
-																			position: "absolute",
-																			left: `${paddingLeft}px`,
-																			top: `${top + lineHeight * 0.45}px`,
-																			width: `${strikeWidth}px`,
-																			height: "2px",
-																			background: "rgba(220,53,69,0.8)",
-																			borderRadius: "2px",
-																		}}
-																	/>
-																</>
-															) : null}
-															<div
-																data-line-index={idx}
-																className="flex items-center gap-2 pointer-events-auto"
-																style={{
-																	position: "absolute",
-																	top: `${top}px`,
-																	right: "6px",
-																	display: showControls ? "flex" : "none",
+															<input
+																ref={(el) => {
+																	listInputRefs.current[idx] = el;
 																}}
+																onFocus={() => handleListFocus(idx)}
+																onKeyDown={(e) => handleKeyDownInsert(e, idx)}
+																type="text"
+																value={text || ""}
+																onChange={(e) => editLine(idx, e.target.value)}
+																aria-label={`Edit name for line ${idx + 1}`}
+																style={{
+																	width: `calc(100% - ${
+																		ICON_DIV_WIDTH + 10
+																	}px)`,
+																}}
+																className={`mr-3 truncate text-[18px] md:text-[19px] font-bold focus:outline-none ${
+																	!isIncluded
+																		? "line-through decoration-red-400 text-gray-400"
+																		: ""
+																}`}
+																maxLength={50}
+															/>
+															{/* empty-line affordance handled by input placeholder; no plus icon */}
+
+															<div
+																className={`${
+																	(text || "").trim() ? "flex" : "hidden"
+																} items-center gap-3 absolute right-3 md:right-1`}
+																style={{ width: ICON_DIV_WIDTH }}
 															>
 																<input
 																	type="checkbox"
-																	aria-label={`Include ${trimmed} on wheel`}
+																	aria-label={`Include ${(
+																		text || ""
+																	).trim()} on wheel`}
 																	onPointerDown={(e) => e.stopPropagation()}
 																	checked={isIncluded}
 																	onChange={(e) =>
@@ -3948,7 +3914,19 @@ export default function Home() {
 																	onClick={(e) => {
 																		e.preventDefault();
 																		e.stopPropagation();
-																		clearTextareaLine(idx);
+																		setHideEmpty(false);
+																		clearLineDirect(idx);
+																		// focus the input after clearing
+																		const ref = advancedMode
+																			? advancedInputRefs.current[idx]
+																			: listInputRefs.current[idx];
+																		if (ref) {
+																			try {
+																				ref.focus();
+																				ref.selectionStart =
+																					ref.selectionEnd = 0;
+																			} catch {}
+																		}
 																	}}
 																	aria-label={`Clear line ${idx + 1}`}
 																	className="w-6 h-6 bg-white/90 rounded shadow-md flex items-center justify-center hover:bg-white p-0"
@@ -3961,6 +3939,7 @@ export default function Home() {
 																	onClick={(e) => {
 																		e.preventDefault();
 																		e.stopPropagation();
+																		setHideEmpty(false);
 																		deleteLine(idx);
 																	}}
 																	aria-label={`Delete line ${idx + 1}`}
@@ -3972,6 +3951,25 @@ export default function Home() {
 														</div>
 													);
 												})}
+
+												{/* Reset / Undo buttons */}
+												{/* <div className="absolute right-0 bottom-0  flex gap-2 p-1.5">
+													<button
+														type="button"
+														onClick={handleReset}
+														className="px-2 py-1 rounded bg-red-500 text-white text-sm hover:bg-red-600 shadow"
+													>
+														Reset
+													</button>
+													<button
+														type="button"
+														onClick={handleUndo}
+														disabled={!canUndo}
+														className="px-2 py-1 text-gray-50 rounded bg-[#404040] text-sm hover:bg-gray-300 disabled:opacity-30 disabled:cursor-not-allowed shadow"
+													>
+														Undo
+													</button>
+												</div> */}
 											</div>
 											<div className="absolute right-0 bottom-0  flex gap-2 px-4.5 py-2">
 												<button
