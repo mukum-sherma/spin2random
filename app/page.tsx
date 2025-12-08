@@ -1989,44 +1989,61 @@ export default function Home() {
 			ctx.translate(centerX, centerY);
 			ctx.rotate(startAngle + angle / 2);
 			ctx.textAlign = "center";
-			// Determine the final text color for this partition. Use the global
-			// `wheelTextColor` by default, but if a per-partition image exists,
-			// prefer the cached per-partition contrast (black/white). If the
-			// cached contrast is missing, compute it synchronously from the
-			// ImageBitmap so the text color updates immediately.
-			let finalTextColor =
-				namesList.length === 0 ? "rgba(0, 0, 0, 0.4)" : wheelTextColor;
+			// Determine the contrast color for text using this priority:
+			// 1) per-partition image contrast (if partition image present)
+			// 2) explicit per-partition color (if user selected a color)
+			// 3) global wheel image contrast (if wheel image present)
+			// 4) resolved default partition color
+			let contrastColor =
+				namesList.length === 0 ? "rgba(0, 0, 0, 0.4)" : "#000000";
+
+			// 1) partition image contrast
 			if (id && partitionImageBitmapByIdRef.current[id]) {
-				finalTextColor =
-					partitionImageContrastByIdRef.current[id] || finalTextColor;
-				if (!partitionImageContrastByIdRef.current[id]) {
+				if (partitionImageContrastByIdRef.current[id]) {
+					contrastColor = partitionImageContrastByIdRef.current[id];
+				} else {
 					try {
-						finalTextColor =
-							computeContrastFromBitmap(
-								partitionImageBitmapByIdRef.current[id] as ImageBitmap
-							) || finalTextColor;
-						// cache it for subsequent draws
-						partitionImageContrastByIdRef.current[id] = finalTextColor;
-					} catch {
-						// ignore - keep default
-					}
+						const c = computeContrastFromBitmap(
+							partitionImageBitmapByIdRef.current[id] as ImageBitmap
+						);
+						contrastColor = c || contrastColor;
+						partitionImageContrastByIdRef.current[id] = contrastColor;
+					} catch {}
 				}
 			} else if (partitionImageBitmapRefs.current[index]) {
-				finalTextColor =
-					partitionImageContrastRef.current[index] || finalTextColor;
-				if (!partitionImageContrastRef.current[index]) {
+				// legacy index-keyed bitmap
+				if (partitionImageContrastRef.current[index]) {
+					contrastColor = partitionImageContrastRef.current[index];
+				} else {
 					try {
-						finalTextColor =
-							computeContrastFromBitmap(
-								partitionImageBitmapRefs.current[index] as ImageBitmap
-							) || finalTextColor;
-						// cache it for subsequent draws
-						partitionImageContrastRef.current[index] = finalTextColor;
-					} catch {
-						// ignore - keep default
-					}
+						const c = computeContrastFromBitmap(
+							partitionImageBitmapRefs.current[index] as ImageBitmap
+						);
+						contrastColor = c || contrastColor;
+						partitionImageContrastRef.current[index] = contrastColor;
+					} catch {}
 				}
 			}
+
+			// 2) explicit partition color (overrides wheel image/default when present)
+			if (explicitColor) {
+				try {
+					contrastColor =
+						computeContrastFromColor(explicitColor) || contrastColor;
+				} catch {}
+			} else if (wheelImageBitmapRef.current) {
+				// 3) wheel image contrast
+				contrastColor = wheelTextColor || contrastColor;
+			} else {
+				// 4) fallback to resolved default partition color
+				try {
+					contrastColor =
+						computeContrastFromColor(resolvedDefaultColor) || contrastColor;
+				} catch {}
+			}
+
+			// Use the computed contrast color as the fill for text
+			const finalTextColor = contrastColor;
 			ctx.fillStyle = finalTextColor;
 
 			// Calculate base font size based on canvas size (responsive)
@@ -2068,36 +2085,28 @@ export default function Home() {
 				displayText += "...";
 			}
 
-			// If a wheel image or a per-partition image is present under this
-			// text, draw a subtle contrasting stroke and shadow to ensure
-			// legibility against the image.
-			const hasImageUnderText =
-				!!wheelImageBitmapRef.current ||
-				!!(id
-					? partitionImageBitmapByIdRef.current[id]
-					: partitionImageBitmapRefs.current[index]);
-			if (hasImageUnderText) {
-				// Prefer contrast computed for wheel image; fall back to cached
-				// per-partition contrast if present.
-				const contrastColor = wheelImageBitmapRef.current
-					? wheelTextColor
-					: id
-					? partitionImageContrastByIdRef.current[id] ||
-					  wheelTextColor ||
-					  "#000000"
-					: partitionImageContrastRef.current[index] ||
-					  wheelTextColor ||
-					  "#000000";
+			// Determine whether there's an image under the text (partition or wheel)
+			const imageUnderText = !!(
+				(id && partitionImageBitmapByIdRef.current[id]) ||
+				partitionImageBitmapRefs.current[index] ||
+				wheelImageBitmapRef.current
+			);
 
-				const isTextWhite =
-					(contrastColor || "").toLowerCase() === "#ffffff" ||
-					(contrastColor || "").toLowerCase() === "#fff";
+			// Compute stroke/shadow based on the computed contrast color so
+			// the effect matches whatever is drawn beneath the text (image or color).
+			const contrastForStroke = finalTextColor || wheelTextColor || "#000000";
+			const isTextWhite =
+				(contrastForStroke || "").toLowerCase() === "#ffffff" ||
+				(contrastForStroke || "").toLowerCase() === "#fff";
 
-				const strokeColor = isTextWhite
-					? "rgba(0,0,0,0.65)"
-					: "rgba(255,255,255,0.9)";
+			const strokeColor = isTextWhite
+				? "rgba(0,0,0,0.65)"
+				: "rgba(255,255,255,0.9)";
 
-				// Subtle shadow to lift text slightly (cleared after)
+			// Apply a subtle shadow + stroke when there's an image OR when an
+			// explicit partition color (or default color) is present to help
+			// legibility against varied backgrounds.
+			if (imageUnderText || explicitColor || resolvedDefaultColor) {
 				ctx.shadowColor = isTextWhite
 					? "rgba(0,0,0,0.25)"
 					: "rgba(255,255,255,0.18)";
@@ -2107,10 +2116,8 @@ export default function Home() {
 				ctx.lineWidth = Math.max(2, Math.round(fontSize * 0.12));
 				ctx.strokeStyle = strokeColor;
 				ctx.strokeText(displayText, radius * 0.65, fontSize * 0.3);
-				// draw filled text on top
 				ctx.fillText(displayText, radius * 0.65, fontSize * 0.3);
 
-				// reset shadow so it doesn't affect other drawings
 				ctx.shadowColor = "transparent";
 				ctx.shadowBlur = 0;
 			} else {
