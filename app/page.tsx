@@ -3816,6 +3816,32 @@ export default function Home() {
 													</div>
 												)}
 											</div>
+											<div className="border-t px-3 py-3 flex justify-center">
+												<button
+													type="button"
+													onClick={() => {
+														try {
+															if (
+																uploadedBlobUrlRef.current &&
+																uploadedBlobUrlRef.current.startsWith &&
+																uploadedBlobUrlRef.current.startsWith("blob:")
+															) {
+																URL.revokeObjectURL(uploadedBlobUrlRef.current);
+															}
+														} catch {}
+														uploadedBlobUrlRef.current = null;
+														setWheelImageSrc(null);
+														wheelImageBitmapRef.current = null;
+														setWheelTextColor("#000");
+														drawWheelRef.current?.();
+													}}
+													className="flex items-center gap-2 px-2 py-1 rounded bg-red-500 text-white text-sm hover:bg-red-600 shadow"
+													aria-label="Reset wheel image"
+												>
+													<Trash2 size={16} />
+													<span>Reset</span>
+												</button>
+											</div>
 										</DropdownMenuContent>
 									</DropdownMenu>
 									<label className="flex items-center gap-2 ml-2">
