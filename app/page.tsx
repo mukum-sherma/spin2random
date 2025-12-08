@@ -3154,6 +3154,41 @@ export default function Home() {
 							/>
 						))}
 					</div>
+					<div className="border-t mt-2 pt-2 px-1 flex justify-center">
+						<button
+							type="button"
+							className="flex items-center gap-2 px-2 py-1 rounded bg-red-500 text-white text-sm hover:bg-red-600 shadow"
+							onClick={() => {
+								try {
+									const idx = paletteOpenFor as number;
+									const id = lineIdsRef.current?.[idx];
+									if (id) {
+										setPartitionColorsById((prev) => {
+											const out = { ...prev };
+											delete out[id];
+											return out;
+										});
+										setPartitionColors((prev) => {
+											const copy = { ...prev };
+											delete copy[idx];
+											return copy;
+										});
+									} else {
+										setPartitionColors((prev) => {
+											const copy = { ...prev };
+											delete copy[idx];
+											return copy;
+										});
+									}
+								} catch {}
+								drawWheelRef.current?.();
+								closePalette();
+							}}
+						>
+							<Trash2 size={16} />
+							<span>Reset</span>
+						</button>
+					</div>
 				</div>
 			)}
 			<style jsx>{`
