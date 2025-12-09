@@ -3184,7 +3184,7 @@ export default function Home() {
 				</DialogContent>
 			</Dialog>
 
-			{/* Warning: attempted spin with no names */}
+			{/* Warning: attempted spin with no names    */}
 			<Dialog open={showEmptyNamesWarn} onOpenChange={setShowEmptyNamesWarn}>
 				<DialogContent className="sm:max-w-[600px] w-[90%] text-orange-400">
 					<DialogHeader>
