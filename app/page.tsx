@@ -81,6 +81,7 @@ export default function Home() {
 	const [spinning, setSpinning] = useState(false);
 	const [rotation, setRotation] = useState(0);
 	const [winner, setWinner] = useState<string | null>(null);
+	const [winnerIndex, setWinnerIndex] = useState<number | null>(null);
 	const [showDialog, setShowDialog] = useState(false);
 	// Confetti: dynamically import react-confetti (no SSR)
 	const Confetti = useMemo(
@@ -2498,6 +2499,7 @@ export default function Home() {
 			}
 
 			setWinner(namesList[winnerIndex]);
+			setWinnerIndex(winnerIndex);
 			setShowDialog(true);
 		},
 		[namesList, lineIds, partitionWeights, partitionWeightsById]
@@ -3569,9 +3571,31 @@ export default function Home() {
 										</Button>
 									</div>
 									<div>
-										<p className="text-4xl tracking-widest text-center text-yellow-900">
-											{winner}
-										</p>
+										<div className="flex items-center gap-4">
+											{(() => {
+												const idx = winnerIndex;
+												if (idx == null) return null;
+												const id = lineIdsRef.current?.[idx];
+												const src = id
+													? partitionImagesById[id] ?? partitionImages[idx]
+													: partitionImages[idx];
+												if (!src) return null;
+												return (
+													<div className="w-20 h-20 rounded overflow-hidden">
+														<Image
+															src={src}
+															alt="winner"
+															width={100}
+															height={100}
+															className="object-cover"
+														/>
+													</div>
+												);
+											})()}
+											<p className="text-4xl tracking-widest text-center text-yellow-900">
+												{winner}
+											</p>
+										</div>
 									</div>
 								</div>
 							</div>
@@ -4647,9 +4671,31 @@ export default function Home() {
 								</Button>
 							</div>
 							<div>
-								<p className="text-4xl tracking-widest text-center text-yellow-900">
-									{winner}
-								</p>
+								<div className="flex items-center gap-4">
+									{(() => {
+										const idx = winnerIndex;
+										if (idx == null) return null;
+										const id = lineIdsRef.current?.[idx];
+										const src = id
+											? partitionImagesById[id] ?? partitionImages[idx]
+											: partitionImages[idx];
+										if (!src) return null;
+										return (
+											<div className="w-20 h-20 rounded overflow-hidden">
+												<Image
+													src={src}
+													alt="winner"
+													width={80}
+													height={80}
+													className="object-cover"
+												/>
+											</div>
+										);
+									})()}
+									<p className="text-4xl tracking-widest text-center text-yellow-900">
+										{winner}
+									</p>
+								</div>
 							</div>
 						</div>
 					</div>
