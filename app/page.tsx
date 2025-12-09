@@ -828,6 +828,8 @@ export default function Home() {
 
 	// Show confirm dialog when resetting in Normal or Advanced mode
 	const [showResetConfirm, setShowResetConfirm] = useState(false);
+	// Show warning when attempting to spin with no names
+	const [showEmptyNamesWarn, setShowEmptyNamesWarn] = useState(false);
 	// Variant controls which message the dialog shows ('normal' or 'advanced')
 	const [resetDialogVariant, setResetDialogVariant] = useState<
 		"normal" | "advanced"
@@ -2506,7 +2508,11 @@ export default function Home() {
 	);
 
 	const spinWheel = useCallback(() => {
-		if (spinning || namesList.length === 0) return;
+		if (spinning) return;
+		if (namesList.length === 0) {
+			setShowEmptyNamesWarn(true);
+			return;
+		}
 
 		setSpinning(true);
 
@@ -3152,7 +3158,7 @@ export default function Home() {
 					<DialogHeader>
 						<DialogTitle>Confirm reset</DialogTitle>
 					</DialogHeader>
-					<DialogDescription>
+					<DialogDescription className="text-gray-800">
 						{resetDialogVariant === "normal"
 							? "You may lose any image, color or % win set for participants in Advanced mode if you reset"
 							: "You may lose any image, color or % win set for participants  if you reset"}
@@ -3172,6 +3178,43 @@ export default function Home() {
 								className="px-3 py-1 w-fit rounded bg-red-500 text-white hover:bg-red-600"
 							>
 								Confirm
+							</button>
+						</div>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			{/* Warning: attempted spin with no names */}
+			<Dialog open={showEmptyNamesWarn} onOpenChange={setShowEmptyNamesWarn}>
+				<DialogContent className="sm:max-w-[600px] w-[90%] text-orange-400">
+					<DialogHeader>
+						<DialogTitle>Warning</DialogTitle>
+					</DialogHeader>
+					<DialogDescription className="flex gap-2 text-orange-700">
+						<svg
+							aria-hidden="true"
+							className="w-5 h-5 shrink-0"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							strokeWidth="2"
+							strokeLinecap="round"
+							strokeLinejoin="round"
+						>
+							<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+							<line x1="12" y1="9" x2="12" y2="13" />
+							<line x1="12" y1="17" x2="12.01" y2="17" />
+						</svg>
+						Enter names to spin the wheel
+					</DialogDescription>
+					<DialogFooter>
+						<div className="flex justify-center">
+							<button
+								type="button"
+								onClick={() => setShowEmptyNamesWarn(false)}
+								className="px-3 py-1 w-fit rounded bg-gray-100 text-gray-800 hover:bg-gray-200"
+							>
+								OK
 							</button>
 						</div>
 					</DialogFooter>
