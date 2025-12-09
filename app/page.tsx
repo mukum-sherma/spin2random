@@ -528,6 +528,69 @@ export default function Home() {
 	// loaded image bitmap for faster drawing into the canvas (per-segment clipping)
 	const wheelImageBitmapRef = useRef<ImageBitmap | null>(null);
 	const audioBufferRef = useRef<AudioBuffer | null>(null);
+
+	// Snapshot for recently removed entry to support Undo
+	const [removedSnapshot, setRemovedSnapshot] = useState<null | {
+		index: number;
+		name: string;
+		id?: string | null;
+		partitionImageIndex?: string;
+		partitionImageById?: string;
+		partitionColorIndex?: string;
+		partitionColorById?: string;
+		partitionWeightIndex?: number | undefined;
+		partitionWeightById?: number | undefined;
+		partitionImageBlobUrlIndex?: string | null;
+		partitionImageBlobUrlById?: string | null;
+	}>(null);
+	const [showUndoToast, setShowUndoToast] = useState(false);
+	const undoTimerRef = useRef<number | null>(null);
+
+	// Play an AudioBuffer through a gentle processing chain to make sounds softer/smoother.
+	const playBufferSoftly = (
+		buffer: AudioBuffer | null,
+		options?: {
+			gain?: number;
+			cutoff?: number;
+			attack?: number;
+			release?: number;
+			when?: number;
+		}
+	) => {
+		const audioContext = audioContextRef.current;
+		if (!audioContext || !buffer) return;
+		try {
+			const now = audioContext.currentTime;
+			const when = options?.when ?? now;
+			const src = audioContext.createBufferSource();
+			src.buffer = buffer;
+			// Lowpass filter to gently soften high frequencies (default softer)
+			const lp = audioContext.createBiquadFilter();
+			lp.type = "lowpass";
+			lp.frequency.value = options?.cutoff ?? 5000; // softer default
+			lp.Q.value = 0.7;
+			// Small gain node with smooth envelope
+			const g = audioContext.createGain();
+			const targetGain = options?.gain ?? 0.85;
+			const attack = Math.max(0.001, options?.attack ?? 0.01);
+			const release = Math.max(0.02, options?.release ?? 0.6); // longer default release
+
+			g.gain.setValueAtTime(0.0001, when);
+			g.gain.linearRampToValueAtTime(targetGain, when + attack);
+
+			src.connect(lp);
+			lp.connect(g);
+			g.connect(audioContext.destination);
+
+			// Stop after buffer duration + release to allow tail
+			src.start(when);
+			const stopAt = when + buffer.duration + release;
+			g.gain.linearRampToValueAtTime(0.0001, stopAt);
+			src.stop(stopAt + 0.02);
+		} catch (err) {
+			console.warn("playBufferSoftly failed:", err);
+		}
+	};
 	const audioContextRef = useRef<AudioContext | null>(null);
 	const lastSegmentRef = useRef<number>(-1);
 	// dynamic deceleration extension (ms) used to allow the wheel to keep slowing until speed ~ 0
@@ -844,6 +907,204 @@ export default function Home() {
 	const cancelReset = (e?: React.MouseEvent) => {
 		if (e) e.preventDefault();
 		setShowResetConfirm(false);
+	};
+
+	const removeWinnerAndClose = () => {
+		if (winnerIndex == null) {
+			setShowDialog(false);
+			setWinner(null);
+			setWinnerIndex(null);
+			return;
+		}
+
+		const idx = winnerIndex;
+		const name = namesList[idx] ?? "";
+		const id = lineIdsRef.current?.[idx] ?? null;
+
+		// Snapshot partition data for undo
+		const snapshot = {
+			index: idx,
+			name,
+			id,
+			partitionImageIndex: partitionImages[idx],
+			partitionImageById: id ? partitionImagesById[id] : undefined,
+			partitionColorIndex: partitionColors[idx],
+			partitionColorById: id ? partitionColorsById[id] : undefined,
+			partitionWeightIndex: partitionWeights[idx],
+			partitionWeightById: id ? partitionWeightsById[id] : undefined,
+			partitionImageBlobUrlIndex:
+				partitionImageBlobUrlsRef.current[idx] ?? null,
+			partitionImageBlobUrlById: id
+				? partitionImageBlobUrlsByIdRef.current[id] ?? null
+				: null,
+		};
+		setRemovedSnapshot(snapshot);
+
+		// Remove id-keyed maps for this id (defer permanent deletion until undo timeout)
+		if (id) {
+			setPartitionImagesById((prev) => {
+				const copy = { ...prev };
+				delete copy[id];
+				return copy;
+			});
+			setPartitionColorsById((prev) => {
+				const copy = { ...prev };
+				delete copy[id];
+				return copy;
+			});
+			setPartitionWeightsById((prev) => {
+				const copy = { ...prev };
+				delete copy[id];
+				return copy;
+			});
+			partitionImageBlobUrlsByIdRef.current[id] = null;
+			partitionImageBitmapByIdRef.current[id] = null;
+		}
+
+		// Remove index-keyed maps (shift indices down)
+		const removeIndexKeyed = <T,>(
+			obj: Record<number, T>,
+			removeIdx: number
+		) => {
+			const out: Record<number, T> = {};
+			Object.keys(obj).forEach((k) => {
+				const n = Number(k);
+				if (isNaN(n)) return;
+				if (n < removeIdx) out[n] = obj[n];
+				else if (n > removeIdx) out[n - 1] = obj[n];
+			});
+			return out;
+		};
+
+		setPartitionImages((prev) => removeIndexKeyed(prev, idx));
+		setPartitionColors((prev) => removeIndexKeyed(prev, idx));
+		setPartitionWeights((prev) => removeIndexKeyed(prev, idx));
+
+		// Update refs too
+		const newBlobUrls: Record<number, string | null> = {};
+		Object.keys(partitionImageBlobUrlsRef.current).forEach((k) => {
+			const n = Number(k);
+			if (isNaN(n)) return;
+			if (n < idx) newBlobUrls[n] = partitionImageBlobUrlsRef.current[n];
+			else if (n > idx)
+				newBlobUrls[n - 1] = partitionImageBlobUrlsRef.current[n];
+		});
+		partitionImageBlobUrlsRef.current = newBlobUrls;
+
+		const newBitmapRefs: Record<number, ImageBitmap | null> = {};
+		Object.keys(partitionImageBitmapRefs.current).forEach((k) => {
+			const n = Number(k);
+			if (isNaN(n)) return;
+			if (n < idx) newBitmapRefs[n] = partitionImageBitmapRefs.current[n];
+			else if (n > idx)
+				newBitmapRefs[n - 1] = partitionImageBitmapRefs.current[n];
+		});
+		partitionImageBitmapRefs.current = newBitmapRefs;
+
+		// Perform actual deletion of name (handles history/includeMap/focus)
+		try {
+			deleteLine(idx);
+		} catch {}
+
+		setShowDialog(false);
+		setWinner(null);
+		setWinnerIndex(null);
+
+		// Show undo toast for a short time
+		setShowUndoToast(true);
+		if (undoTimerRef.current) window.clearTimeout(undoTimerRef.current);
+		undoTimerRef.current = window.setTimeout(() => {
+			// time's up — clear snapshot and hide toast
+			setRemovedSnapshot(null);
+			setShowUndoToast(false);
+			undoTimerRef.current = null;
+		}, 6000);
+	};
+
+	const handleUndoRemove = () => {
+		if (!removedSnapshot) return;
+		// revert names via history undo (deleteLine pushed a new history state)
+		handleUndo();
+
+		const s = removedSnapshot;
+		// Restore id-keyed maps
+		if (s.id) {
+			setPartitionImagesById((prev) => ({
+				...prev,
+				[s.id!]: s.partitionImageById!,
+			}));
+			setPartitionColorsById((prev) => ({
+				...prev,
+				[s.id!]: s.partitionColorById!,
+			}));
+			setPartitionWeightsById((prev) => ({
+				...prev,
+				[s.id!]: s.partitionWeightById!,
+			}));
+			if (s.partitionImageBlobUrlById) {
+				partitionImageBlobUrlsByIdRef.current[s.id] =
+					s.partitionImageBlobUrlById;
+			}
+			// Note: bitmap-by-id will be reloaded lazily when needed; set to null
+			partitionImageBitmapByIdRef.current[s.id] = null;
+		}
+
+		// Insert index-keyed maps back by shifting existing keys up
+		const insertIndexKeyed = <T,>(
+			obj: Record<number, T>,
+			insertIdx: number,
+			val?: T
+		) => {
+			const out: Record<number, T> = {};
+			Object.keys(obj).forEach((k) => {
+				const n = Number(k);
+				if (isNaN(n)) return;
+				if (n < insertIdx) out[n] = obj[n];
+				else out[n + 1] = obj[n];
+			});
+			if (typeof val !== "undefined") out[insertIdx] = val;
+			return out;
+		};
+
+		if (s.partitionImageIndex) {
+			setPartitionImages((prev) =>
+				insertIndexKeyed(prev, s.index, s.partitionImageIndex)
+			);
+		}
+		if (typeof s.partitionColorIndex !== "undefined") {
+			setPartitionColors((prev) =>
+				insertIndexKeyed(prev, s.index, s.partitionColorIndex as any)
+			);
+		}
+		if (typeof s.partitionWeightIndex !== "undefined") {
+			setPartitionWeights((prev) =>
+				insertIndexKeyed(prev, s.index, s.partitionWeightIndex as any)
+			);
+		}
+
+		if (s.partitionImageBlobUrlIndex) {
+			const curr = { ...partitionImageBlobUrlsRef.current } as Record<
+				number,
+				string | null
+			>;
+			const newMap: Record<number, string | null> = {};
+			Object.keys(curr).forEach((k) => {
+				const n = Number(k);
+				if (isNaN(n)) return;
+				if (n < s.index) newMap[n] = curr[n];
+				else newMap[n + 1] = curr[n];
+			});
+			newMap[s.index] = s.partitionImageBlobUrlIndex;
+			partitionImageBlobUrlsRef.current = newMap;
+		}
+
+		// clear snapshot and UI
+		setRemovedSnapshot(null);
+		setShowUndoToast(false);
+		if (undoTimerRef.current) {
+			window.clearTimeout(undoTimerRef.current);
+			undoTimerRef.current = null;
+		}
 	};
 
 	// handleClearLine removed — replaced by `clearTextareaLine` / `clearLineDirect` usages
@@ -1335,33 +1596,28 @@ export default function Home() {
 			}
 
 			try {
-				// Play drum roll using Web Audio API
+				// Play drum roll and winning sounds softly/smoothly
 				if (drumBufferRef.current) {
-					console.log("🎵 Playing drum roll...");
-					const drumSource = audioContext.createBufferSource();
-					drumSource.buffer = drumBufferRef.current;
-					const drumGain = audioContext.createGain();
-					drumGain.gain.value = 0.8;
-					drumSource.connect(drumGain);
-					drumGain.connect(audioContext.destination);
-					drumSource.start(0);
-					console.log("✅ Drum roll started");
+					console.log("🎵 Playing drum roll (soft)...");
+					playBufferSoftly(drumBufferRef.current, {
+						gain: 0.7,
+						cutoff: 5000,
+						attack: 0.02,
+						release: 0.8,
+					});
 				} else {
 					console.warn("❌ Drum buffer not loaded");
 				}
 
-				// Play selected winning sound using Web Audio API
 				const winningBuffer = winningBuffersRef.current.get(winningSound);
 				if (winningBuffer) {
-					console.log("🎵 Playing winning sound:", winningSound);
-					const winSource = audioContext.createBufferSource();
-					winSource.buffer = winningBuffer;
-					const winGain = audioContext.createGain();
-					winGain.gain.value = 0.9;
-					winSource.connect(winGain);
-					winGain.connect(audioContext.destination);
-					winSource.start(0);
-					console.log("✅ Winning sound started");
+					console.log("🎵 Playing winning sound (soft):", winningSound);
+					playBufferSoftly(winningBuffer, {
+						gain: 0.8,
+						cutoff: 7000,
+						attack: 0.04,
+						release: 1.0,
+					});
 				} else {
 					console.warn("❌ Winning buffer not found for:", winningSound);
 				}
@@ -2673,11 +2929,13 @@ export default function Home() {
 				const audioBuffer = audioBufferRef.current;
 				const audioContext = audioContextRef.current;
 				if (audioBuffer && audioContext) {
-					// Create a new source node for each tick (they're one-time use)
-					const source = audioContext.createBufferSource();
-					source.buffer = audioBuffer;
-					source.connect(audioContext.destination);
-					source.start(0);
+					// Play tick through soft chain for a smoother, less harsh sound
+					playBufferSoftly(audioBuffer, {
+						gain: 0.55,
+						cutoff: 7000,
+						attack: 0.002,
+						release: 0.12,
+					});
 				}
 			}
 			// Decide whether to continue animating. We want to run until the wheel
@@ -3613,8 +3871,8 @@ export default function Home() {
 											/>
 										</Button>
 									</div>
-									<div>
-										<div className="flex items-center gap-4">
+									<div className="w-full">
+										<div className="flex items-center gap-4 justify-center">
 											{(() => {
 												const idx = winnerIndex;
 												if (idx == null) return null;
@@ -3624,20 +3882,38 @@ export default function Home() {
 													: partitionImages[idx];
 												if (!src) return null;
 												return (
-													<div className="w-20 h-20 rounded overflow-hidden">
+													<div className="w-26 h-26 rounded overflow-hidden">
 														<Image
 															src={src}
 															alt="winner"
-															width={100}
-															height={100}
+															width={120}
+															height={120}
 															className="object-cover"
 														/>
 													</div>
 												);
 											})()}
-											<p className="text-4xl tracking-widest text-center text-yellow-900">
+											<p className="text-4xl flex tracking-widest text-center text-yellow-900">
 												{winner}
 											</p>
+										</div>
+										<div className="w-full">
+											<div className="w-full flex justify-end gap-2 -mb-3 text-[10px] tracking-wider">
+												<button
+													type="button"
+													onClick={() => setShowDialog(false)}
+													className="px-3 py-2  w-fit rounded bg-gray-100 text-gray-800 hover:bg-gray-200 mr-2 shadow-sm"
+												>
+													OK
+												</button>
+												<button
+													type="button"
+													onClick={removeWinnerAndClose}
+													className="px-3 py-2 w-fit rounded bg-red-500 text-white hover:bg-red-600 shadow-sm"
+												>
+													Remove
+												</button>
+											</div>
 										</div>
 									</div>
 								</div>
@@ -4693,7 +4969,7 @@ export default function Home() {
 								// Prevent closing via Escape (match original behavior)
 								if (e.key === "Escape") e.preventDefault();
 							}}
-							className={`${magazine.className} border-2 shadow-lg gap-8 relative rounded-[10px] max-w-[95%] z-50 px-5 md:min-w-[600px] flex flex-col items-center justify-center py-6 bg-linear-to-r from-yellow-100 via-yellow-200 to-yellow-400`}
+							className={`${magazine.className} border-2 shadow-lg gap-4 relative rounded-[10px] max-w-[95%] z-50 px-5 md:min-w-[600px] flex flex-col items-center justify-center pb-6 pt-8 bg-linear-to-r from-yellow-100 via-yellow-200 to-yellow-400`}
 						>
 							<div className="wrap-break-word">
 								<p
@@ -4713,8 +4989,8 @@ export default function Home() {
 									/>
 								</Button>
 							</div>
-							<div>
-								<div className="flex items-center gap-4">
+							<div className="w-full">
+								<div className="flex items-center justify-center flex-col gap-4 w-full">
 									{(() => {
 										const idx = winnerIndex;
 										if (idx == null) return null;
@@ -4724,20 +5000,39 @@ export default function Home() {
 											: partitionImages[idx];
 										if (!src) return null;
 										return (
-											<div className="w-20 h-20 rounded overflow-hidden">
+											<div className="w-26 h-26 rounded overflow-hidden">
 												<Image
 													src={src}
 													alt="winner"
-													width={80}
-													height={80}
+													width={120}
+													height={120}
 													className="object-cover"
 												/>
 											</div>
 										);
 									})()}
-									<p className="text-4xl tracking-widest text-center text-yellow-900">
+									<p className="text-4xl tracking-widest pt-3 text-center text-yellow-900">
 										{winner}
 									</p>
+
+									<div className="w-full">
+										<div className="w-full flex justify-end gap-2 -mb-3 text-[10px] tracking-wider">
+											<button
+												type="button"
+												onClick={() => setShowDialog(false)}
+												className="px-3 py-2  w-fit rounded bg-gray-100 text-gray-800 hover:bg-gray-200 mr-2 shadow-sm"
+											>
+												OK
+											</button>
+											<button
+												type="button"
+												onClick={removeWinnerAndClose}
+												className="px-3 py-2 w-fit rounded bg-red-500 text-white hover:bg-red-600 shadow-sm"
+											>
+												Remove
+											</button>
+										</div>
+									</div>
 								</div>
 							</div>
 						</div>
