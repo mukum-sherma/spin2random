@@ -3700,9 +3700,11 @@ export default function Home() {
 					>
 						<div
 							className={`${
-								hideNames
+								isFullscreen
+									? "w-full flex justify-center items-center flex-col"
+									: hideNames
 									? "md:w-[95%] lg:w-[85%] xl:w-[75%] 2xl:w-[60%]"
-									: "w-full md:flex-1"
+									: `w-full md:flex-1`
 							} relative`}
 						>
 							{/* Title and Fullscreen Header */}
@@ -3787,6 +3789,7 @@ export default function Home() {
 								</button>
 							</div>
 
+							{/* this is the actual wheel  */}
 							<div className="wheel-canvas-container md:p-8">
 								<canvas
 									ref={canvasRef}
@@ -3797,6 +3800,7 @@ export default function Home() {
 									onClick={spinWheel}
 								/>
 							</div>
+
 							{namesList.length === 0 && (
 								<p
 									className="text-center text-orange-400 font-bold mt-1 flex items-center gap-2 justify-center"
