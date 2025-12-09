@@ -621,6 +621,8 @@ export default function Home() {
 	const [controlsTick, setControlsTick] = useState(0);
 	// Advanced mode: show extra per-line UI blocks below each textarea line
 	const [advancedMode, setAdvancedMode] = useState(false);
+	// Hide names input section (when true the names column slides away)
+	const [hideNames, setHideNames] = useState(false);
 
 	// measured textarea size (used to render identical-size div in Advanced mode)
 	const [textareaSize, setTextareaSize] = useState<{
@@ -3689,454 +3691,505 @@ export default function Home() {
 				<main className="flex md:flex-row flex-col gap-1">
 					<section
 						id="wheel"
-						className={`md:w-[75%] lg:w-[70%] xl:w-[65%] 2xl:w-[55%] relative ${
-							isFullscreen ? "bg-white" : ""
-						}`}
+						className={`${
+							hideNames
+								? "w-full md:flex-1 flex justify-center"
+								: "md:w-[75%] lg:w-[70%] xl:w-[65%] 2xl:w-[55%]"
+						} relative ${isFullscreen ? "bg-white" : ""}`}
 						ref={wheelSectionRef}
 					>
-						{/* Title and Fullscreen Header */}
-						<div className="flex items-center justify-center gap-3 mb-4 px-4 z-50">
-							{/* Editable Title */}
-							<div className="flex items-center gap-2 flex-1 justify-center">
-								{isEditingTitle ? (
-									<div
-										key={`title-edit-${controlsTick}`}
-										className="flex items-center gap-2"
-									>
-										<input
-											type="text"
-											value={tempTitle}
-											onChange={(e) => setTempTitle(e.target.value)}
-											onKeyDown={(e) => {
-												if (e.key === "Enter") saveTitle();
-												if (e.key === "Escape") cancelEditTitle();
-											}}
-											className="wheel-title-input text-xl md:text-3xl font-bold text-gray-800 border-2 border-blue-500 rounded px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
-											style={getTextContrastStyles() || undefined}
-											autoFocus
-										/>
-										<button
-											onClick={saveTitle}
-											className="p-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition"
-											aria-label="Save title"
+						<div
+							className={`${
+								hideNames
+									? "md:w-[95%] lg:w-[85%] xl:w-[75%] 2xl:w-[60%]"
+									: "w-full md:flex-1"
+							} relative`}
+						>
+							{/* Title and Fullscreen Header */}
+							<div className="flex items-center justify-center gap-3 mb-4 px-4 z-50">
+								{/* Editable Title */}
+								<div className="flex items-center gap-2 flex-1 justify-center">
+									{isEditingTitle ? (
+										<div
+											key={`title-edit-${controlsTick}`}
+											className="flex items-center gap-2"
 										>
-											<Check size={20} />
-										</button>
-										<button
-											onClick={cancelEditTitle}
-											className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition"
-											aria-label="Cancel"
-										>
-											<X size={20} />
-										</button>
-										{/* Palette button intentionally not shown in title area */}
-									</div>
-								) : (
-									<div
-										className={`flex items-center gap-2 ${lexendDeca.className} tracking-tight `}
-									>
-										<h2
-											className={`wheel-title text-xl md:text-3xl font-bold text-gray-800 `}
-											style={getTextContrastStyles() || undefined}
-										>
-											{wheelTitle}
-										</h2>
-										<button
-											onClick={startEditingTitle}
-											className="p-2 hover:bg-gray-200 rounded-lg transition"
-											aria-label="Edit title"
-										>
-											<Pencil
-												size={18}
-												className="text-gray-600"
+											<input
+												type="text"
+												value={tempTitle}
+												onChange={(e) => setTempTitle(e.target.value)}
+												onKeyDown={(e) => {
+													if (e.key === "Enter") saveTitle();
+													if (e.key === "Escape") cancelEditTitle();
+												}}
+												className="wheel-title-input text-xl md:text-3xl font-bold text-gray-800 border-2 border-blue-500 rounded px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
 												style={getTextContrastStyles() || undefined}
+												autoFocus
 											/>
-										</button>
-									</div>
-								)}
+											<button
+												onClick={saveTitle}
+												className="p-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition"
+												aria-label="Save title"
+											>
+												<Check size={20} />
+											</button>
+											<button
+												onClick={cancelEditTitle}
+												className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition"
+												aria-label="Cancel"
+											>
+												<X size={20} />
+											</button>
+											{/* Palette button intentionally not shown in title area */}
+										</div>
+									) : (
+										<div
+											className={`flex items-center gap-2 ${lexendDeca.className} tracking-tight `}
+										>
+											<h2
+												className={`wheel-title text-xl md:text-3xl font-bold text-gray-800 `}
+												style={getTextContrastStyles() || undefined}
+											>
+												{wheelTitle}
+											</h2>
+											<button
+												onClick={startEditingTitle}
+												className="p-2 hover:bg-gray-200 rounded-lg transition"
+												aria-label="Edit title"
+											>
+												<Pencil
+													size={18}
+													className="text-gray-600"
+													style={getTextContrastStyles() || undefined}
+												/>
+											</button>
+										</div>
+									)}
+								</div>
+
+								{/* Fullscreen button - only on md+ screens */}
+								<button
+									onClick={toggleFullscreen}
+									className="hidden md:flex relative z-60 md:z-1 items-center gap-2 bg-black/70 hover:bg-black/90 text-white px-3 py-2 rounded-lg transition-all duration-200 shadow-lg pointer-events-auto allow-fullscreen"
+									aria-label={
+										isFullscreen ? "Exit fullscreen" : "Enter fullscreen"
+									}
+									style={getButtonContrastStyles() || undefined}
+								>
+									{isFullscreen ? (
+										<>
+											<Minimize2 size={20} />
+											<span className="text-sm font-semibold">Exit</span>
+										</>
+									) : (
+										<Maximize2 size={20} />
+									)}
+								</button>
 							</div>
 
-							{/* Fullscreen button - only on md+ screens */}
-							<button
-								onClick={toggleFullscreen}
-								className="hidden md:flex relative z-60 md:z-1 items-center gap-2 bg-black/70 hover:bg-black/90 text-white px-3 py-2 rounded-lg transition-all duration-200 shadow-lg pointer-events-auto allow-fullscreen"
-								aria-label={
-									isFullscreen ? "Exit fullscreen" : "Enter fullscreen"
-								}
-								style={getButtonContrastStyles() || undefined}
-							>
-								{isFullscreen ? (
-									<>
-										<Minimize2 size={20} />
-										<span className="text-sm font-semibold">Exit</span>
-									</>
-								) : (
-									<Maximize2 size={20} />
-								)}
-							</button>
-						</div>
-
-						<div className="wheel-canvas-container md:p-8">
-							<canvas
-								ref={canvasRef}
-								className={`cursor-pointer w-full block p-0 ${
-									spinning ? "pointer-events-none" : ""
-								}`}
-								style={{ padding: 0 }}
-								onClick={spinWheel}
-							/>
-						</div>
-						{namesList.length === 0 && (
-							<p
-								className="text-center text-orange-400 font-bold mt-1 flex items-center gap-2 justify-center"
-								style={getTextContrastStyles() || undefined}
-							>
-								<svg
-									aria-hidden="true"
-									className="w-5 h-5 shrink-0"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									strokeWidth="2"
-									strokeLinecap="round"
-									strokeLinejoin="round"
+							<div className="wheel-canvas-container md:p-8">
+								<canvas
+									ref={canvasRef}
+									className={`cursor-pointer w-full block p-0 ${
+										spinning ? "pointer-events-none" : ""
+									}`}
+									style={{ padding: 0 }}
+									onClick={spinWheel}
+								/>
+							</div>
+							{namesList.length === 0 && (
+								<p
+									className="text-center text-orange-400 font-bold mt-1 flex items-center gap-2 justify-center"
+									style={getTextContrastStyles() || undefined}
 								>
-									<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-									<line x1="12" y1="9" x2="12" y2="13" />
-									<line x1="12" y1="17" x2="12.01" y2="17" />
-								</svg>
-								Enter names to spin the wheel
-							</p>
-						)}
-						{!spinning && namesList.length > 0 && (
-							<p
-								className="text-center text-gray-600 mt-1 text-[18px] md:text-[24px] font-bold "
-								style={getTextContrastStyles() || undefined}
-							>
-								Click or Tap the wheel to spin!
-							</p>
-						)}
-						{spinning && (
-							<p
-								className={`text-center ${masque.className} font-bold ${
-									isFullscreen ? "text-blue-400" : "text-blue-900"
-								} tracking-tight text-[18px] md:text-[24px] mt-2`}
-								style={getTextContrastStyles() || undefined}
-							>
-								Spinning . . .
-							</p>
-						)}
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5 shrink-0"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										strokeWidth="2"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+									>
+										<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+										<line x1="12" y1="9" x2="12" y2="13" />
+										<line x1="12" y1="17" x2="12.01" y2="17" />
+									</svg>
+									Enter names to spin the wheel
+								</p>
+							)}
+							{!spinning && namesList.length > 0 && (
+								<p
+									className="text-center text-gray-600 mt-1 text-[18px] md:text-[24px] font-bold "
+									style={getTextContrastStyles() || undefined}
+								>
+									Click or Tap the wheel to spin!
+								</p>
+							)}
+							{spinning && (
+								<p
+									className={`text-center ${masque.className} font-bold ${
+										isFullscreen ? "text-blue-400" : "text-blue-900"
+									} tracking-tight text-[18px] md:text-[24px] mt-2`}
+									style={getTextContrastStyles() || undefined}
+								>
+									Spinning . . .
+								</p>
+							)}
 
-						{isFullscreen && (
-							<div
-								className={`${
-									showDialog ? "fixed" : "hidden"
-								} left-0 top-0 h-full w-full rounded-[20px] p-4 z-40 justify-center items-center flex bg-black/20`}
-							>
-								{/* Fullscreen confetti sits behind the dialog content but inside the fullscreen element
-								    so it will be visible while the wheel section is in fullscreen. */}
-								{showConfetti && Confetti ? (
-									<Confetti
-										width={
-											windowSize.width ||
-											(typeof window !== "undefined" ? window.innerWidth : 0)
-										}
-										height={
-											windowSize.height ||
-											(typeof window !== "undefined" ? window.innerHeight : 0)
-										}
-										recycle={false}
-										numberOfPieces={350}
-										className="pointer-events-none absolute h-full w-full z-99999"
-									/>
-								) : null}
+							{isFullscreen && (
 								<div
-									className={`${magazine.className} border-2 shadow-lg gap-8 relative rounded-[10px] px-5 min-w-[600px]  flex flex-col items-center justify-center py-6  bg-linear-to-r from-yellow-100 via-yellow-200 to-yellow-400`}
+									className={`${
+										showDialog ? "fixed" : "hidden"
+									} left-0 top-0 h-full w-full rounded-[20px] p-4 z-40 justify-center items-center flex bg-black/20`}
 								>
-									<div className="wrap-break-word">
-										<p
-											className={`text-2xl tracking-widest text-yellow-700 font-extralight px-5`}
-										>
-											🎉 The winner is... 🎉
-										</p>
-										<Button
-											variant="ghost"
-											className="absolute right-0 text-[20px] top-0 p-4 font-bold bg-transparent hover:bg-transparent"
-											onClick={() => setShowDialog(false)}
-											aria-label="Close dialog"
-										>
-											<X
-												size={40}
-												className="text-yellow-900 hover:text-yellow-400"
-											/>
-										</Button>
-									</div>
-									<div className="w-full">
-										<div className="flex items-center gap-4 justify-center">
-											{(() => {
-												const idx = winnerIndex;
-												if (idx == null) return null;
-												const id = lineIdsRef.current?.[idx];
-												const src = id
-													? partitionImagesById[id] ?? partitionImages[idx]
-													: partitionImages[idx];
-												if (!src) return null;
-												return (
-													<div className="w-26 h-26 rounded overflow-hidden">
-														<Image
-															src={src}
-															alt="winner"
-															width={120}
-															height={120}
-															className="object-cover"
-														/>
-													</div>
-												);
-											})()}
-											<p className="text-4xl flex tracking-widest text-center text-yellow-900">
-												{winner}
+									{/* Fullscreen confetti sits behind the dialog content but inside the fullscreen element
+								    so it will be visible while the wheel section is in fullscreen. */}
+									{showConfetti && Confetti ? (
+										<Confetti
+											width={
+												windowSize.width ||
+												(typeof window !== "undefined" ? window.innerWidth : 0)
+											}
+											height={
+												windowSize.height ||
+												(typeof window !== "undefined" ? window.innerHeight : 0)
+											}
+											recycle={false}
+											numberOfPieces={350}
+											className="pointer-events-none absolute h-full w-full z-99999"
+										/>
+									) : null}
+									<div
+										className={`${magazine.className} border-2 shadow-lg gap-4 relative rounded-[10px] px-5 min-w-[600px]  flex flex-col items-center justify-center py-6  bg-linear-to-r from-yellow-100 via-yellow-200 to-yellow-400`}
+									>
+										<div className="wrap-break-word">
+											<p
+												className={`text-2xl tracking-widest text-yellow-700 font-extralight px-5`}
+											>
+												🎉 The winner is... 🎉
 											</p>
+											<Button
+												variant="ghost"
+												className="absolute right-0 text-[20px] top-0 p-4 font-bold bg-transparent hover:bg-transparent"
+												onClick={() => setShowDialog(false)}
+												aria-label="Close dialog"
+											>
+												<X
+													size={40}
+													className="text-yellow-900 hover:text-yellow-400"
+												/>
+											</Button>
 										</div>
 										<div className="w-full">
-											<div className="w-full flex justify-end gap-2 -mb-3 text-[10px] tracking-wider">
-												<button
-													type="button"
-													onClick={() => setShowDialog(false)}
-													className="px-3 py-2  w-fit rounded bg-gray-100 text-gray-800 hover:bg-gray-200 mr-2 shadow-sm"
-												>
-													OK
-												</button>
-												<button
-													type="button"
-													onClick={removeWinnerAndClose}
-													className="px-3 py-2 w-fit rounded bg-red-500 text-white hover:bg-red-600 shadow-sm"
-												>
-													Remove
-												</button>
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-						)}
-						{/* Slider popover for per-partition weight (Share %) */}
-						{sliderOpenFor !== null && (
-							<div
-								ref={sliderRef}
-								className="z-50 p-3 bg-white rounded shadow-lg border"
-								style={{
-									position: "fixed",
-									left: "50%",
-									top: "50%",
-									transform: "translate(-50%, 0)",
-								}}
-							>
-								{(() => {
-									const idx = sliderOpenFor as number;
-									const id = lineIdsRef.current?.[idx];
-									const current = id
-										? partitionWeightsByIdRef.current[id] ??
-										  partitionWeightsRef.current[idx] ??
-										  1
-										: partitionWeightsRef.current[idx] ?? 1;
-									return (
-										<div className="w-[260px] rounded-md">
-											{(() => {
-												const pct =
-													totalWeightForRender > 0
-														? Math.round((current / totalWeightForRender) * 100)
-														: 0;
-												return (
-													<div className="text-sm font-medium mb-2 flex items-center justify-between">
-														<div>Adjust weight ( 0–200 )</div>
-														<div className="text-sm text-gray-600">
-															( {pct}% win )
+											<div className="flex items-center gap-4 justify-center">
+												{(() => {
+													const idx = winnerIndex;
+													if (idx == null) return null;
+													const id = lineIdsRef.current?.[idx];
+													const src = id
+														? partitionImagesById[id] ?? partitionImages[idx]
+														: partitionImages[idx];
+													if (!src) return null;
+													return (
+														<div className="w-26 h-26 rounded overflow-hidden">
+															<Image
+																src={src}
+																alt="winner"
+																width={120}
+																height={120}
+																className="object-cover"
+															/>
 														</div>
-													</div>
-												);
-											})()}
-											<input
-												type="range"
-												min={0}
-												max={200}
-												value={current}
-												onChange={(e) => {
-													const val = Number(
-														(e.target as HTMLInputElement).value || 0
 													);
-													if (id) {
-														// update refs synchronously so draw uses latest value
-														partitionWeightsByIdRef.current = {
-															...partitionWeightsByIdRef.current,
-															[id]: val,
-														};
-														setPartitionWeightsById((prev) => ({
-															...prev,
-															[id]: val,
-														}));
-														// remove any legacy index-keyed value
-														partitionWeightsRef.current = {
-															...partitionWeightsRef.current,
-														};
-														delete partitionWeightsRef.current[idx];
-														setPartitionWeights((prev) => {
-															// keep text input in sync with slider
-															setSliderWeightText(String(val));
-															const copy = { ...prev };
-															delete copy[idx];
-															return copy;
-														});
-													} else {
-														partitionWeightsRef.current = {
-															...partitionWeightsRef.current,
-															[idx]: val,
-														};
-														setPartitionWeights((prev) => ({
-															...prev,
-															[idx]: val,
-														}));
-													}
-													// draw immediately using refs
-													drawWheelRef.current?.();
-												}}
-												className="w-full"
-											/>
-											<div className="mt-1 flex justify-between items-center">
-												<div className="mt-2 text-sm">
-													<label className="mr-2">Weight:</label>
-													<input
-														type="text"
-														value={sliderWeightText}
-														onChange={(e) => {
-															const raw =
-																(e.target as HTMLInputElement).value || "";
-															// allow only digits while typing
-															const filtered = raw.replace(/[^0-9]/g, "");
-															setSliderWeightText(filtered);
-															// parse numeric and update slider live
-															let val = Number(filtered || "0");
-															if (isNaN(val)) val = 0;
-															val = Math.max(0, Math.min(200, Math.round(val)));
-															if (id) {
-																partitionWeightsByIdRef.current = {
-																	...partitionWeightsByIdRef.current,
-																	[id]: val,
-																};
-																setPartitionWeightsById((prev) => ({
-																	...prev,
-																	[id]: val,
-																}));
-																partitionWeightsRef.current = {
-																	...partitionWeightsRef.current,
-																};
-																delete partitionWeightsRef.current[idx];
-																setPartitionWeights((prev) => {
-																	const copy = { ...prev };
-																	delete copy[idx];
-																	return copy;
-																});
-															} else {
-																partitionWeightsRef.current = {
-																	...partitionWeightsRef.current,
-																	[idx]: val,
-																};
-																setPartitionWeights((prev) => ({
-																	...prev,
-																	[idx]: val,
-																}));
-															}
-															drawWheelRef.current?.();
-														}}
-														onBlur={() => {
-															let val = Number(sliderWeightText || "0");
-															if (isNaN(val)) val = 0;
-															val = Math.max(0, Math.min(200, Math.round(val)));
-															if (id) {
-																partitionWeightsByIdRef.current = {
-																	...partitionWeightsByIdRef.current,
-																	[id]: val,
-																};
-																setPartitionWeightsById((prev) => ({
-																	...prev,
-																	[id]: val,
-																}));
-																partitionWeightsRef.current = {
-																	...partitionWeightsRef.current,
-																};
-																delete partitionWeightsRef.current[idx];
-																setPartitionWeights((prev) => {
-																	const copy = { ...prev };
-																	delete copy[idx];
-																	return copy;
-																});
-															} else {
-																partitionWeightsRef.current = {
-																	...partitionWeightsRef.current,
-																	[idx]: val,
-																};
-																setPartitionWeights((prev) => ({
-																	...prev,
-																	[idx]: val,
-																}));
-															}
-															// reflect normalized value back into the text input
-															setSliderWeightText(String(val));
-															drawWheelRef.current?.();
-														}}
-														onKeyDown={(e) => {
-															if (e.key === "Enter") {
-																e.preventDefault();
-																// commit value on Enter
-																(e.target as HTMLInputElement).blur();
-															}
-														}}
-														className="w-20 px-2 py-1 border rounded text-sm"
-													/>
-												</div>
-												<div className="mt-2">
+												})()}
+												<p className="text-4xl flex tracking-widest text-center text-yellow-900">
+													{winner}
+												</p>
+											</div>
+											<div className="w-full">
+												<div className="w-full flex justify-end gap-2 -mb-3 text-[10px] tracking-wider">
 													<button
 														type="button"
-														className="px-2 py-1 text-white font-medium rounded bg-[#0671ff] hover:bg-blue-800 text-sm"
-														onClick={() => {
-															setSliderOpenFor(null);
-															sliderAnchorRef.current = null;
-														}}
+														onClick={() => setShowDialog(false)}
+														className="px-3 py-2  w-fit rounded bg-gray-100 text-gray-800 hover:bg-gray-200 mr-2 shadow-sm"
 													>
-														Done
+														OK
+													</button>
+													<button
+														type="button"
+														onClick={removeWinnerAndClose}
+														className="px-3 py-2 w-fit rounded bg-red-500 text-white hover:bg-red-600 shadow-sm"
+													>
+														Remove
 													</button>
 												</div>
 											</div>
 										</div>
-									);
-								})()}
-							</div>
-						)}
+									</div>
+								</div>
+							)}
+							{/* Slider popover for per-partition weight (Share %) */}
+							{sliderOpenFor !== null && (
+								<div
+									ref={sliderRef}
+									className="z-50 p-3 bg-white rounded shadow-lg border"
+									style={{
+										position: "fixed",
+										left: "50%",
+										top: "50%",
+										transform: "translate(-50%, 0)",
+									}}
+								>
+									{(() => {
+										const idx = sliderOpenFor as number;
+										const id = lineIdsRef.current?.[idx];
+										const current = id
+											? partitionWeightsByIdRef.current[id] ??
+											  partitionWeightsRef.current[idx] ??
+											  1
+											: partitionWeightsRef.current[idx] ?? 1;
+										return (
+											<div className="w-[260px] rounded-md">
+												{(() => {
+													const pct =
+														totalWeightForRender > 0
+															? Math.round(
+																	(current / totalWeightForRender) * 100
+															  )
+															: 0;
+													return (
+														<div className="text-sm font-medium mb-2 flex items-center justify-between">
+															<div>Adjust weight ( 0–200 )</div>
+															<div className="text-sm text-gray-600">
+																( {pct}% win )
+															</div>
+														</div>
+													);
+												})()}
+												<input
+													type="range"
+													min={0}
+													max={200}
+													value={current}
+													onChange={(e) => {
+														const val = Number(
+															(e.target as HTMLInputElement).value || 0
+														);
+														if (id) {
+															// update refs synchronously so draw uses latest value
+															partitionWeightsByIdRef.current = {
+																...partitionWeightsByIdRef.current,
+																[id]: val,
+															};
+															setPartitionWeightsById((prev) => ({
+																...prev,
+																[id]: val,
+															}));
+															// remove any legacy index-keyed value
+															partitionWeightsRef.current = {
+																...partitionWeightsRef.current,
+															};
+															delete partitionWeightsRef.current[idx];
+															setPartitionWeights((prev) => {
+																// keep text input in sync with slider
+																setSliderWeightText(String(val));
+																const copy = { ...prev };
+																delete copy[idx];
+																return copy;
+															});
+														} else {
+															partitionWeightsRef.current = {
+																...partitionWeightsRef.current,
+																[idx]: val,
+															};
+															setPartitionWeights((prev) => ({
+																...prev,
+																[idx]: val,
+															}));
+														}
+														// draw immediately using refs
+														drawWheelRef.current?.();
+													}}
+													className="w-full"
+												/>
+												<div className="mt-1 flex justify-between items-center">
+													<div className="mt-2 text-sm">
+														<label className="mr-2">Weight:</label>
+														<input
+															type="text"
+															value={sliderWeightText}
+															onChange={(e) => {
+																const raw =
+																	(e.target as HTMLInputElement).value || "";
+																// allow only digits while typing
+																const filtered = raw.replace(/[^0-9]/g, "");
+																setSliderWeightText(filtered);
+																// parse numeric and update slider live
+																let val = Number(filtered || "0");
+																if (isNaN(val)) val = 0;
+																val = Math.max(
+																	0,
+																	Math.min(200, Math.round(val))
+																);
+																if (id) {
+																	partitionWeightsByIdRef.current = {
+																		...partitionWeightsByIdRef.current,
+																		[id]: val,
+																	};
+																	setPartitionWeightsById((prev) => ({
+																		...prev,
+																		[id]: val,
+																	}));
+																	partitionWeightsRef.current = {
+																		...partitionWeightsRef.current,
+																	};
+																	delete partitionWeightsRef.current[idx];
+																	setPartitionWeights((prev) => {
+																		const copy = { ...prev };
+																		delete copy[idx];
+																		return copy;
+																	});
+																} else {
+																	partitionWeightsRef.current = {
+																		...partitionWeightsRef.current,
+																		[idx]: val,
+																	};
+																	setPartitionWeights((prev) => ({
+																		...prev,
+																		[idx]: val,
+																	}));
+																}
+																drawWheelRef.current?.();
+															}}
+															onBlur={() => {
+																let val = Number(sliderWeightText || "0");
+																if (isNaN(val)) val = 0;
+																val = Math.max(
+																	0,
+																	Math.min(200, Math.round(val))
+																);
+																if (id) {
+																	partitionWeightsByIdRef.current = {
+																		...partitionWeightsByIdRef.current,
+																		[id]: val,
+																	};
+																	setPartitionWeightsById((prev) => ({
+																		...prev,
+																		[id]: val,
+																	}));
+																	partitionWeightsRef.current = {
+																		...partitionWeightsRef.current,
+																	};
+																	delete partitionWeightsRef.current[idx];
+																	setPartitionWeights((prev) => {
+																		const copy = { ...prev };
+																		delete copy[idx];
+																		return copy;
+																	});
+																} else {
+																	partitionWeightsRef.current = {
+																		...partitionWeightsRef.current,
+																		[idx]: val,
+																	};
+																	setPartitionWeights((prev) => ({
+																		...prev,
+																		[idx]: val,
+																	}));
+																}
+																// reflect normalized value back into the text input
+																setSliderWeightText(String(val));
+																drawWheelRef.current?.();
+															}}
+															onKeyDown={(e) => {
+																if (e.key === "Enter") {
+																	e.preventDefault();
+																	// commit value on Enter
+																	(e.target as HTMLInputElement).blur();
+																}
+															}}
+															className="w-20 px-2 py-1 border rounded text-sm"
+														/>
+													</div>
+													<div className="mt-2">
+														<button
+															type="button"
+															className="px-2 py-1 text-white font-medium rounded bg-[#0671ff] hover:bg-blue-800 text-sm"
+															onClick={() => {
+																setSliderOpenFor(null);
+																sliderAnchorRef.current = null;
+															}}
+														>
+															Done
+														</button>
+													</div>
+												</div>
+											</div>
+										);
+									})()}
+								</div>
+							)}
+						</div>
 					</section>
 
-					<section id="names-list" className="md:w-[25%] my-2 p-4 font-bold">
-						<div className="w-full">
+					<section
+						id="names-list"
+						className={`my-2 p-4 font-bold transition-all duration-300 ease-in-out ${
+							hideNames ? "w-[140px]" : "md:w-[25%]"
+						}`}
+					>
+						<div className="hidden md:flex items-center gap-3  w-fit mb-10 -mt-4">
+							<label className="flex items-center gap-2">
+								<Checkbox
+									aria-label="Hide names"
+									checked={hideNames}
+									onCheckedChange={(v: boolean | "indeterminate") =>
+										setHideNames(!!v)
+									}
+									className="min-h-6 min-w-6 border border-gray-300 shadow-sm p-1 data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-500 data-[state=checked]:text-white dark:data-[state=checked]:border-blue-700 dark:data-[state=checked]:bg-blue-500"
+								/>
+								<span
+									className={`text-sm w-[120px] font-light text-gray-700 tracking-wider ${masque.className}`}
+								>
+									{"  "}
+									Hide{" "}
+								</span>
+							</label>
+						</div>
+
+						<div
+							className={`overflow-hidden transition-all duration-300 ease-in-out ${
+								hideNames
+									? "max-h-0 opacity-0 md:opacity-100 w-0"
+									: "max-h-[900px] opacity-100 w-full"
+							}`}
+							id="names-input-section"
+						>
 							<label
 								className="block  mb-2 text-gray-600"
 								style={getTextContrastStyles() || undefined}
 							>
 								Enter names (one per line)
 							</label>
-							<div className="flex flex-col items-start gap-4">
+							<div className="flex flex-col items-start gap-3">
 								{/* Right-side quick-order buttons (visible on all screens). Mirrors the names order radio options */}
 								<div
 									id="entries"
 									role="radiogroup"
 									aria-label="Quick name ordering"
-									className="flex items-stretch gap-3 ml-1 w-24 flex-wrap w-full"
+									className="flex items-stretch gap-3 w-24 flex-wrap w-full px-2"
 								>
 									<button
 										type="button"
 										role="radio"
 										aria-checked={nameOrder === "shuffle"}
 										onClick={() => handleNamesOrderChange("shuffle")}
-										className="flex items-center gap-1 px-2 py-1 rounded-sm text-sm text-white shadow justify-start"
+										className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm text-white shadow-md justify-start transform active:translate-y-0.5"
 										style={{
-											background: "#008cbd",
+											background: "linear-gradient(180deg,#08a0d1,#0076b8)",
+											boxShadow:
+												"0 6px 10px rgba(3,10,20,0.12), inset 0 1px 0 rgba(255,255,255,0.06)",
 											...(getButtonContrastStyles() || {}),
 										}}
 										// style={{ background: "#155cff" }}
@@ -4150,9 +4203,11 @@ export default function Home() {
 										role="radio"
 										aria-checked={nameOrder === "ascending"}
 										onClick={() => handleNamesOrderChange("ascending")}
-										className="flex items-center gap-1 px-2 py-1 rounded-sm text-sm text-white shadow justify-start"
+										className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm text-white shadow-md justify-start transform active:translate-y-0.5"
 										style={{
-											background: "#008cbd",
+											background: "linear-gradient(180deg,#08a0d1,#0076b8)",
+											boxShadow:
+												"0 6px 10px rgba(3,10,20,0.12), inset 0 1px 0 rgba(255,255,255,0.06)",
 											...(getButtonContrastStyles() || {}),
 										}}
 									>
@@ -4165,25 +4220,31 @@ export default function Home() {
 										role="radio"
 										aria-checked={nameOrder === "descending"}
 										onClick={() => handleNamesOrderChange("descending")}
-										className="flex items-center gap-1 px-2 py-1 rounded-sm text-sm text-white shadow justify-start"
+										className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm text-white shadow-md justify-start transform active:translate-y-0.5"
 										style={{
-											background: "#008cbd",
+											background: "linear-gradient(180deg,#08a0d1,#0076b8)",
+											boxShadow:
+												"0 6px 10px rgba(3,10,20,0.12), inset 0 1px 0 rgba(255,255,255,0.06)",
 											...(getButtonContrastStyles() || {}),
 										}}
 									>
 										<ArrowDown size={16} />
 										<span>Dsc</span>
 									</button>
+								</div>
 
+								<div className="flex justify-between w-full items-center px-2">
 									<DropdownMenu>
 										<DropdownMenuTrigger asChild>
 											<button
 												type="button"
 												role="button"
 												aria-label="Image"
-												className="flex items-center gap-1 px-2 py-1 rounded-sm text-sm text-white shadow justify-start"
+												className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm text-white shadow-md justify-start transform active:translate-y-0.5"
 												style={{
-													background: "#008cbd",
+													background: "linear-gradient(180deg,#08a0d1,#0076b8)",
+													boxShadow:
+														"0 6px 10px rgba(3,10,20,0.12), inset 0 1px 0 rgba(255,255,255,0.06)",
 													...(getButtonContrastStyles() || {}),
 												}}
 											>
@@ -4209,9 +4270,12 @@ export default function Home() {
 														<button
 															type="button"
 															onClick={() => uploadInputRef.current?.click()}
-															className="flex items-center gap-2 px-3 py-1 text-[13px] font-medium rounded-full text-xs text-white shadow justify-start"
+															className="flex items-center gap-2 px-3 py-1 text-[13px] font-medium rounded-full text-xs text-white shadow-md justify-start transform active:translate-y-0.5"
 															style={{
-																background: "#008cbd",
+																background:
+																	"linear-gradient(180deg,#08a0d1,#0076b8)",
+																boxShadow:
+																	"0 6px 10px rgba(3,10,20,0.12), inset 0 1px 0 rgba(255,255,255,0.06)",
 																...(getButtonContrastStyles() || {}),
 															}}
 															aria-label="Upload wheel image"
@@ -4990,30 +5054,32 @@ export default function Home() {
 								</Button>
 							</div>
 							<div className="w-full">
-								<div className="flex items-center justify-center flex-col gap-4 w-full">
-									{(() => {
-										const idx = winnerIndex;
-										if (idx == null) return null;
-										const id = lineIdsRef.current?.[idx];
-										const src = id
-											? partitionImagesById[id] ?? partitionImages[idx]
-											: partitionImages[idx];
-										if (!src) return null;
-										return (
-											<div className="w-26 h-26 rounded overflow-hidden">
-												<Image
-													src={src}
-													alt="winner"
-													width={120}
-													height={120}
-													className="object-cover"
-												/>
-											</div>
-										);
-									})()}
-									<p className="text-4xl tracking-widest pt-3 text-center text-yellow-900">
-										{winner}
-									</p>
+								<div className="flex items-center justify-center flex-col gap-1 w-full">
+									<div className="flex  items-center gap-4">
+										{(() => {
+											const idx = winnerIndex;
+											if (idx == null) return null;
+											const id = lineIdsRef.current?.[idx];
+											const src = id
+												? partitionImagesById[id] ?? partitionImages[idx]
+												: partitionImages[idx];
+											if (!src) return null;
+											return (
+												<div className="w-26 h-26 rounded overflow-hidden">
+													<Image
+														src={src}
+														alt="winner"
+														width={120}
+														height={120}
+														className="object-cover"
+													/>
+												</div>
+											);
+										})()}
+										<p className="text-4xl tracking-widest pt-1 text-center text-yellow-900">
+											{winner}
+										</p>
+									</div>
 
 									<div className="w-full">
 										<div className="w-full flex justify-end gap-2 -mb-3 text-[10px] tracking-wider">
