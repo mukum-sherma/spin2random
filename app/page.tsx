@@ -80,6 +80,10 @@ export default function Home() {
 	const hasNames = names.trim() !== "";
 	const [spinning, setSpinning] = useState(false);
 	const [rotation, setRotation] = useState(0);
+	// Auto-spin the wheel slowly on first load until user manually spins.
+	const [autoSpinActive, setAutoSpinActive] = useState(true);
+	const autoSpinRafRef = useRef<number | null>(null);
+	const autoSpinLastRef = useRef<number | null>(null);
 	const [winner, setWinner] = useState<string | null>(null);
 	const [winnerIndex, setWinnerIndex] = useState<number | null>(null);
 	const [showDialog, setShowDialog] = useState(false);
@@ -2766,6 +2770,8 @@ export default function Home() {
 	);
 
 	const spinWheel = useCallback(() => {
+		// disable initial auto-spin when user triggers a manual spin
+		setAutoSpinActive(false);
 		if (spinning) return;
 		if (namesList.length === 0) {
 			setShowEmptyNamesWarn(true);
@@ -2989,6 +2995,35 @@ export default function Home() {
 		partitionWeightsById,
 		namesList,
 	]);
+
+	// Initial very-slow autonomous spin until user manually spins once.
+	useEffect(() => {
+		if (!autoSpinActive) return;
+		if (namesList.length === 0) return; // don't auto-spin when empty
+		let mounted = true;
+		const degPerMs = 0.001; // ~1 deg/sec (very very slow)
+		const tick = (t: number) => {
+			if (!mounted) return;
+			if (spinning) {
+				autoSpinLastRef.current = t;
+				autoSpinRafRef.current = requestAnimationFrame(tick);
+				return;
+			}
+			const last = autoSpinLastRef.current ?? t;
+			const dt = Math.min(50, t - last);
+			autoSpinLastRef.current = t;
+			setRotation((r) => (r + degPerMs * dt) % 360);
+			autoSpinRafRef.current = requestAnimationFrame(tick);
+		};
+		autoSpinRafRef.current = requestAnimationFrame((t) => {
+			autoSpinLastRef.current = t;
+			tick(t);
+		});
+		return () => {
+			mounted = false;
+			if (autoSpinRafRef.current) cancelAnimationFrame(autoSpinRafRef.current);
+		};
+	}, [autoSpinActive, spinning, namesList.length]);
 
 	// Set canvas size to container width (fill parent)
 	useEffect(() => {
