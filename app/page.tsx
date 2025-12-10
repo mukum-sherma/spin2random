@@ -3693,9 +3693,9 @@ export default function Home() {
 						id="wheel"
 						className={`${
 							hideNames
-								? "w-full md:flex-1 flex justify-center"
-								: "md:w-[75%] lg:w-[70%] xl:w-[65%] 2xl:w-[55%]"
-						} relative ${isFullscreen ? "bg-white" : ""}`}
+								? "w-full md:flex-1 flex justify-center "
+								: "md:w-[75%] lg:w-[70%] xl:w-[65%] 2xl:w-[55%] transition-all duration-300"
+						} relative   ${isFullscreen ? "bg-white" : ""}`}
 						ref={wheelSectionRef}
 					>
 						<div
