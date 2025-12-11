@@ -2901,7 +2901,10 @@ export default function Home() {
 				}
 			}
 
-			setRotation(currentRotation % 360);
+			// Store rotation as a continuous value (no modulo) so the
+			// rendered wheel doesn't jump when passing 360° — compute
+			// modulo only when needed elsewhere (e.g. winner calc).
+			setRotation(currentRotation);
 
 			// Detect segment change and play sound (use weighted segments)
 			const adjustedRotation = (360 - (currentRotation % 360)) % 360;
@@ -3001,7 +3004,7 @@ export default function Home() {
 		if (!autoSpinActive) return;
 		if (namesList.length === 0) return; // don't auto-spin when empty
 		let mounted = true;
-		const degPerMs = 0.001; // ~1 deg/sec (very very slow)
+		const degPerMs = 0.01; // ~10 deg/sec (noticeably faster on first load)
 		const tick = (t: number) => {
 			if (!mounted) return;
 			if (spinning) {
@@ -3012,7 +3015,10 @@ export default function Home() {
 			const last = autoSpinLastRef.current ?? t;
 			const dt = Math.min(50, t - last);
 			autoSpinLastRef.current = t;
-			setRotation((r) => (r + degPerMs * dt) % 360);
+			// Keep a continuous rotation value here to avoid abrupt wrap
+			// when the angle rolls past 360°. Other logic uses `% 360`
+			// where a normalized angle is required.
+			setRotation((r) => r + degPerMs * dt);
 			autoSpinRafRef.current = requestAnimationFrame(tick);
 		};
 		autoSpinRafRef.current = requestAnimationFrame((t) => {
@@ -3860,7 +3866,7 @@ export default function Home() {
 							)}
 							{!spinning && namesList.length > 0 && (
 								<p
-									className="text-center text-gray-600 mt-1 text-[18px] md:text-[24px] font-bold "
+									className="text-center text-gray-500 mt-1 text-[20px] md:text-[28px] font-extrabold "
 									style={getTextContrastStyles() || undefined}
 								>
 									Click or Tap the wheel to spin!
@@ -3952,14 +3958,14 @@ export default function Home() {
 													<button
 														type="button"
 														onClick={() => setShowDialog(false)}
-														className="px-3 py-2  w-fit rounded bg-gray-100 text-gray-800 hover:bg-gray-200 mr-2 shadow-sm"
+														className="px-3 py-2  w-fit rounded bg-yellow-200 text-gray-800 hover:bg-gray-200 mr-2"
 													>
 														OK
 													</button>
 													<button
 														type="button"
 														onClick={removeWinnerAndClose}
-														className="px-3 py-2 w-fit rounded bg-red-500 text-white hover:bg-red-600 shadow-sm"
+														className="px-3 py-2 w-fit rounded bg-red-500 text-white hover:bg-red-600"
 													>
 														Remove
 													</button>
@@ -5125,14 +5131,14 @@ export default function Home() {
 											<button
 												type="button"
 												onClick={() => setShowDialog(false)}
-												className="px-3 py-2  w-fit rounded bg-gray-100 text-gray-800 hover:bg-gray-200 mr-2 shadow-sm"
+												className="px-3 py-2  w-fit rounded bg-yellow-200 text-gray-800 hover:bg-gray-200 mr-2 "
 											>
 												OK
 											</button>
 											<button
 												type="button"
 												onClick={removeWinnerAndClose}
-												className="px-3 py-2 w-fit rounded bg-red-500 text-white hover:bg-red-600 shadow-sm"
+												className="px-3 py-2 w-fit rounded bg-red-500 text-white hover:bg-red-600"
 											>
 												Remove
 											</button>
