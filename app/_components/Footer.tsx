@@ -23,15 +23,14 @@ export default function Footer() {
 							SpinWheelQuiz
 						</h3>
 						<p className="text-slate-200 font-medium mb-1">
-							Create and spin customizable prize wheels — perfect for events,
-							classrooms, giveaways and online raffles.
+							Create and spin customizable wheels to randomly select winners —
+							perfect for events, classrooms, giveaways and online raffles.
 						</p>
 						<p className="text-sm text-slate-300 md:max-w-[90%] ">
-							Build beautiful, shareable spin wheels with custom backgrounds,
-							images, sounds, timers and fair random winner selection — fast,
-							responsive and optimized for mobile. Use our online spin wheel
-							generator for classroom games, giveaways, prize drawings, or team
-							building activities.
+							Build simple, shareable wheels with custom backgrounds, images,
+							sounds, timers, and fair random winner selection — fast,
+							responsive and optimized for mobile. Use this tool for classroom
+							games, giveaways, drawings, or team activities.
 						</p>
 					</div>
 

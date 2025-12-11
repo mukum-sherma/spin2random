@@ -1079,12 +1079,12 @@ export default function Home() {
 		}
 		if (typeof s.partitionColorIndex !== "undefined") {
 			setPartitionColors((prev) =>
-				insertIndexKeyed(prev, s.index, s.partitionColorIndex as any)
+				insertIndexKeyed<string>(prev, s.index, s.partitionColorIndex)
 			);
 		}
 		if (typeof s.partitionWeightIndex !== "undefined") {
 			setPartitionWeights((prev) =>
-				insertIndexKeyed(prev, s.index, s.partitionWeightIndex as any)
+				insertIndexKeyed<number>(prev, s.index, s.partitionWeightIndex)
 			);
 		}
 

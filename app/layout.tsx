@@ -3,7 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import localFont from "next/font/local";
 import Footer from "./_components/Footer";
-import { GoogleAnalytics } from "@next/third-parties/google";
+import LoadThirdPartyScripts from "./_components/LoadThirdPartyScripts.client";
+// Google Analytics will be injected lazily by a client loader to avoid blocking LCP
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -22,15 +23,15 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
 	title: {
-		default: "SpinWheelQuiz",
+		default: "SpinWheelQuiz — Online Random Winner Picker",
 		template: "%s | SpinWheelQuiz",
 	},
 	description:
-		"SpinWheelQuiz — customizable online spin wheel for quizzes, raffles, classrooms and giveaways. Fast, mobile-friendly, configurable sounds and timers.",
+		"Randomly choose winners with a customizable spin wheel — fast, fair and mobile-friendly, with images, sounds and timers.",
 	openGraph: {
 		title: "SpinWheelQuiz — Online Spin Wheel",
 		description:
-			"Create and customize an online spin wheel with backgrounds, sounds and timers. Great for events, classrooms and giveaways.",
+			"Randomly select winners using a customizable spin wheel — fast, fair and mobile-friendly for classrooms, events and giveaways.",
 		url: "https://spinwheelquiz.com",
 		siteName: "SpinWheelQuiz",
 		images: [
@@ -47,7 +48,7 @@ export const metadata: Metadata = {
 		card: "summary_large_image",
 		title: "SpinWheelQuiz",
 		description:
-			"SpinWheelQuiz — customizable online spin wheel for quizzes, raffles and classroom picks.",
+			"SpinWheelQuiz — randomly select winners with a customizable, shareable spin wheel for quizzes, classrooms and giveaways.",
 		images: ["/banner.png"],
 	},
 };
@@ -57,8 +58,6 @@ export default function RootLayout({
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
-	const gaId = process.env.GOOGLE_ANALYTICS_ID;
-
 	return (
 		<html lang="en">
 			<head>
@@ -66,18 +65,16 @@ export default function RootLayout({
 					name="google-adsense-account"
 					content="ca-pub-9815804917269409"
 				></meta>
-				<script
-					async
-					src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9815804917269409"
-					crossOrigin="anonymous"
-				></script>
+				{/* Preload main banner used in header / social preview to improve LCP */}
+				<link rel="preload" as="image" href="/banner.png" />
 				<link rel="icon" href="/favicon.ico" />
-				{gaId && <GoogleAnalytics gaId={gaId} />}
 			</head>
 			<body
 				className={`${geistSans.variable} ${geistMono.variable} ${masque.variable} antialiased `}
 			>
 				{children}
+				{/* Inject third-party scripts after initial load to protect LCP */}
+				<LoadThirdPartyScripts gaId={process.env.GOOGLE_ANALYTICS_ID} />
 				<Footer />
 			</body>
 		</html>
