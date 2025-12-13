@@ -29,26 +29,68 @@ import {
 	// Percent icon not used in this file
 } from "lucide-react";
 import Image from "next/image";
-import {
-	DropdownMenu,
-	DropdownMenuTrigger,
-	DropdownMenuContent,
-} from "@/components/ui/dropdown-menu";
-import Navbar from "./_components/navbar";
+// Lazy-load dropdown menu UI (Radix + floating internals) on the client only
+const DropdownMenu = dynamic(
+	() => import("@/components/ui/dropdown-menu").then((mod) => mod.DropdownMenu),
+	{ ssr: false }
+);
+const DropdownMenuTrigger = dynamic(
+	() =>
+		import("@/components/ui/dropdown-menu").then(
+			(mod) => mod.DropdownMenuTrigger
+		),
+	{ ssr: false }
+);
+const DropdownMenuContent = dynamic(
+	() =>
+		import("@/components/ui/dropdown-menu").then(
+			(mod) => mod.DropdownMenuContent
+		),
+	{ ssr: false }
+);
+// Dynamically import the heavy client-side Navbar to keep it out of initial bundles
+const Navbar = dynamic(() => import("./_components/navbar"), { ssr: false });
 import localFont from "next/font/local";
 
 import { Lexend_Deca } from "next/font/google";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-	DialogDescription,
-	DialogFooter,
-	DialogClose,
-} from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
+// Lazy-load Dialog and Checkbox UI to avoid pulling Radix primitives into initial bundle
+const Dialog = dynamic(
+	() => import("@/components/ui/dialog").then((m) => m.Dialog),
+	{
+		ssr: false,
+	}
+);
+const DialogContent = dynamic(
+	() => import("@/components/ui/dialog").then((m) => m.DialogContent),
+	{ ssr: false }
+);
+const DialogHeader = dynamic(
+	() => import("@/components/ui/dialog").then((m) => m.DialogHeader),
+	{ ssr: false }
+);
+const DialogTitle = dynamic(
+	() => import("@/components/ui/dialog").then((m) => m.DialogTitle),
+	{ ssr: false }
+);
+const DialogDescription = dynamic(
+	() => import("@/components/ui/dialog").then((m) => m.DialogDescription),
+	{ ssr: false }
+);
+const DialogFooter = dynamic(
+	() => import("@/components/ui/dialog").then((m) => m.DialogFooter),
+	{ ssr: false }
+);
+const DialogClose = dynamic(
+	() => import("@/components/ui/dialog").then((m) => m.DialogClose),
+	{ ssr: false }
+);
+const Checkbox = dynamic(
+	() => import("@/components/ui/checkbox").then((m) => m.Checkbox),
+	{
+		ssr: false,
+	}
+);
 // DialogOverlay import removed (unused)
 const lexendDeca = Lexend_Deca({
 	subsets: ["latin"],

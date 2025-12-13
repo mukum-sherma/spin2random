@@ -607,7 +607,7 @@ const Navbar = ({
 						className="flex items-center gap-3 hover:opacity-80 transition-opacity"
 					>
 						<Image
-							src="/banner.png"
+							src="/banner.webp"
 							alt="SpinWheelQuiz Logo"
 							width={50}
 							height={50}

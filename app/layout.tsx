@@ -35,7 +35,7 @@ export const metadata: Metadata = {
 		siteName: "SpinWheelQuiz",
 		images: [
 			{
-				url: "/banner.png",
+				url: "/banner.webp",
 				width: 1200,
 				height: 630,
 				alt: "SpinWheelQuiz preview",
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
 		title: "SpinWheelQuiz",
 		description:
 			"SpinWheelQuiz — randomly select winners with a customizable, shareable spin wheel for quizzes, classrooms and giveaways.",
-		images: ["/banner.png"],
+		images: ["/banner.webp"],
 	},
 };
 
@@ -68,7 +68,7 @@ export default function RootLayout({
 					content="ca-pub-9815804917269409"
 				></meta>
 				{/* Preload main banner used in header / social preview to improve LCP */}
-				<link rel="preload" as="image" href="/banner.png" />
+				<link rel="preload" as="image" href="/banner.webp" />
 				<link rel="icon" href="/favicon.ico" />
 			</head>
 			<body
