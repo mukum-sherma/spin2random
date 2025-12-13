@@ -3,8 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import localFont from "next/font/local";
 import Footer from "./_components/Footer";
-import LoadThirdPartyScripts from "./_components/LoadThirdPartyScripts.client";
-// Google Analytics will be injected lazily by a client loader to avoid blocking LCP
+import Script from "next/script";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -58,6 +57,9 @@ export default function RootLayout({
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
+	const ga =
+		process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID ??
+		process.env.GOOGLE_ANALYTICS_ID;
 	return (
 		<html lang="en">
 			<head>
@@ -73,8 +75,29 @@ export default function RootLayout({
 				className={`${geistSans.variable} ${geistMono.variable} ${masque.variable} antialiased `}
 			>
 				{children}
-				{/* Inject third-party scripts after initial load to protect LCP */}
-				<LoadThirdPartyScripts gaId={process.env.GOOGLE_ANALYTICS_ID} />
+
+				{/* Non-blocking Google Analytics: tiny stub + async load, all lazyOnload so it runs during idle */}
+				{ga && (
+					<>
+						{/* Minimal stub queues calls without heavy work */}
+						<Script id="gtag-stub" strategy="lazyOnload">
+							{`
+                                window.dataLayer = window.dataLayer || [];
+                                function gtag(){dataLayer.push(arguments);}
+                                gtag('js', new Date());
+                                // default to not sending page_view automatically; adjust as needed
+                                gtag('config', '${ga}', { send_page_view: false, anonymize_ip: true });
+                            `}
+						</Script>
+
+						{/* Load the real gtag library during idle */}
+						<Script
+							src={`https://www.googletagmanager.com/gtag/js?id=${ga}`}
+							strategy="lazyOnload"
+						/>
+					</>
+				)}
+
 				<Footer />
 			</body>
 		</html>
