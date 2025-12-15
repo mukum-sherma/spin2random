@@ -76,25 +76,43 @@ export default function RootLayout({
 			>
 				{children}
 
-				{/* Non-blocking Google Analytics: tiny stub + async load, all lazyOnload so it runs during idle */}
+				{/* Google Analytics is consent-gated: we expose a loader function and only
+					inject the real gtag.js when the site has explicit analytics consent.
+					This prevents GA from loading on first view and reduces initial JS execution. */}
 				{ga && (
 					<>
-						{/* Minimal stub queues calls without heavy work */}
-						<Script id="gtag-stub" strategy="lazyOnload">
+						<Script id="gtag-consent-gate" strategy="lazyOnload">
 							{`
-                                window.dataLayer = window.dataLayer || [];
-                                function gtag(){dataLayer.push(arguments);}
-                                gtag('js', new Date());
-                                // default to not sending page_view automatically; adjust as needed
-                                gtag('config', '${ga}', { send_page_view: false, anonymize_ip: true });
-                            `}
-						</Script>
+								(function(){
+									window.dataLayer = window.dataLayer || [];
+									function gtag(){dataLayer.push(arguments);} 
+									window.gtag = window.gtag || gtag;
 
-						{/* Load the real gtag library during idle */}
-						<Script
-							src={`https://www.googletagmanager.com/gtag/js?id=${ga}`}
-							strategy="lazyOnload"
-						/>
+									// Loader that injects the real gtag.js and initializes it.
+									window.__loadGtag = function(){
+										if (window.__gtag_loaded) return;
+										window.__gtag_loaded = true;
+										var s = document.createElement('script');
+										s.src = 'https://www.googletagmanager.com/gtag/js?id=${ga}';
+										s.async = true;
+										s.onload = function(){
+											try{
+												gtag('js', new Date());
+												gtag('config', '${ga}', { send_page_view: false, anonymize_ip: true });
+											}catch(e){}
+										};
+										document.head.appendChild(s);
+									};
+
+									// Auto-load if prior consent was saved
+									try{
+										if (localStorage && localStorage.getItem('wheel.analytics') === 'granted'){
+											window.__loadGtag();
+										}
+									}catch(e){}
+								})();
+							`}
+						</Script>
 					</>
 				)}
 
