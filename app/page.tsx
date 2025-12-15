@@ -1497,7 +1497,7 @@ export default function Home() {
 				await Promise.all(
 					winningFiles.map(async (fileName) => {
 						try {
-							const response = await fetch(`/sounds/winning/${fileName}.wav`);
+							const response = await fetch(`/sounds/winning/${fileName}.mp3`);
 							const arrayBuffer = await response.arrayBuffer();
 							const buffer = await audioContext.decodeAudioData(arrayBuffer);
 							bufferMap.set(fileName, buffer);
@@ -1511,15 +1511,15 @@ export default function Home() {
 				// Preload all spin sounds
 				console.log("📥 Loading spin sounds...");
 				const spinSoundFiles = [
-					"alarm-beep-2mp3",
+					"alarm-beep-2",
 					"alarm-clock-beep",
 					"bell-signal",
 					"chime-bell-ring",
 					"clock-close-up",
 					"clock-gong",
 					"clock-mix-tick",
-					"clock-strikemp3",
-					"electric-tickmp3",
+					"clock-strike",
+					"electric-tick",
 					"pendulum-tick",
 					"percussion-tock",
 					"racing-countdown",

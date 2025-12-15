@@ -62,15 +62,15 @@ const adalima = localFont({
 const timerOptions = Array.from({ length: 39 }, (_, index) => index + 2);
 
 const spinAudioFiles = [
-	"alarm-beep-2mp3",
+	"alarm-beep-2",
 	"alarm-clock-beep",
 	"bell-signal",
 	"chime-bell-ring",
 	"clock-close-up",
 	"clock-gong",
 	"clock-mix-tick",
-	"clock-strikemp3",
-	"electric-tickmp3",
+	"clock-strike",
+	"electric-tick",
 	"pendulum-tick",
 	"percussion-tock",
 	"racing-countdown",
