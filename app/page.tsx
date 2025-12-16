@@ -11,23 +11,53 @@ import {
 import dynamic from "next/dynamic";
 // using native textarea here so we can overlay per-line controls
 // dialog components were unused in the active UI (we use a custom dialog block)
-import {
-	Maximize2,
-	Minimize2,
-	Pencil,
-	Check,
-	X,
-	Trash2,
-	Shuffle,
-	ArrowUp,
-	ArrowDown,
-	LoaderPinwheel,
-	Palette,
-	UploadCloud,
-	Grip,
-	Image as ImageIcon,
-	// Percent icon not used in this file
-} from "lucide-react";
+const Maximize2 = dynamic(
+	() => import("lucide-react/dist/esm/icons/maximize-2"),
+	{ ssr: false }
+);
+const Minimize2 = dynamic(
+	() => import("lucide-react/dist/esm/icons/minimize-2"),
+	{ ssr: false }
+);
+const Pencil = dynamic(() => import("lucide-react/dist/esm/icons/pencil"), {
+	ssr: false,
+});
+const Check = dynamic(() => import("lucide-react/dist/esm/icons/check"), {
+	ssr: false,
+});
+const X = dynamic(() => import("lucide-react/dist/esm/icons/x"), {
+	ssr: false,
+});
+const Trash2 = dynamic(() => import("lucide-react/dist/esm/icons/trash-2"), {
+	ssr: false,
+});
+const Shuffle = dynamic(() => import("lucide-react/dist/esm/icons/shuffle"), {
+	ssr: false,
+});
+const ArrowUp = dynamic(() => import("lucide-react/dist/esm/icons/arrow-up"), {
+	ssr: false,
+});
+const ArrowDown = dynamic(
+	() => import("lucide-react/dist/esm/icons/arrow-down"),
+	{ ssr: false }
+);
+const LoaderPinwheel = dynamic(
+	() => import("lucide-react/dist/esm/icons/loader-pinwheel"),
+	{ ssr: false }
+);
+const Palette = dynamic(() => import("lucide-react/dist/esm/icons/palette"), {
+	ssr: false,
+});
+const UploadCloud = dynamic(
+	() => import("lucide-react/dist/esm/icons/upload-cloud"),
+	{ ssr: false }
+);
+const Grip = dynamic(() => import("lucide-react/dist/esm/icons/grip"), {
+	ssr: false,
+});
+const ImageIcon = dynamic(() => import("lucide-react/dist/esm/icons/image"), {
+	ssr: false,
+});
 import Image from "next/image";
 // Lazy-load dropdown menu UI (Radix + floating internals) on the client only
 const DropdownMenu = dynamic(
@@ -50,6 +80,7 @@ const DropdownMenuContent = dynamic(
 );
 // Dynamically import the heavy client-side Navbar to keep it out of initial bundles
 const Navbar = dynamic(() => import("./_components/navbar"), { ssr: false });
+// Note: Dev-only `WheelClient` removed from page to avoid unused client bundle
 import localFont from "next/font/local";
 
 import { Lexend_Deca } from "next/font/google";
@@ -122,10 +153,57 @@ export default function Home() {
 	const hasNames = names.trim() !== "";
 	const [spinning, setSpinning] = useState(false);
 	const [rotation, setRotation] = useState(0);
-	// Auto-spin the wheel slowly on first load until user manually spins.
-	const [autoSpinActive, setAutoSpinActive] = useState(true);
+	// Auto-spin the wheel slowly: start disabled, enable after a short delay
+	// unless the user interacts first.
+	const [autoSpinActive, setAutoSpinActive] = useState(false);
+	// Dev toggle removed: dynamic dev Wheel is no longer exposed in the UI
+	// Offload spin physics to a compute worker by default to trim main-thread work
+	const useWorker = true;
+	const userInteractedRef = useRef(false);
 	const autoSpinRafRef = useRef<number | null>(null);
 	const autoSpinLastRef = useRef<number | null>(null);
+
+	// Enable auto-spin after a short delay to avoid heavy work during critical load.
+	useEffect(() => {
+		const DELAY_MS = 2000; // configurable delay before auto-spin starts
+		let timer: number | null = null;
+
+		const enableIfNotInteracted = () => {
+			if (!userInteractedRef.current) {
+				setAutoSpinActive(true);
+			}
+		};
+
+		// schedule delayed enable
+		timer = window.setTimeout(enableIfNotInteracted, DELAY_MS);
+
+		// If the user interacts before the delay, enable autoSpin immediately
+		const onFirstUserGesture = () => {
+			userInteractedRef.current = true;
+			setAutoSpinActive(true);
+			if (timer) {
+				clearTimeout(timer);
+				timer = null;
+			}
+			// remove listeners after first gesture
+			document.removeEventListener("pointerdown", onFirstUserGesture);
+			document.removeEventListener("keydown", onFirstUserGesture);
+			document.removeEventListener("touchstart", onFirstUserGesture);
+		};
+
+		document.addEventListener("pointerdown", onFirstUserGesture, {
+			once: true,
+		});
+		document.addEventListener("keydown", onFirstUserGesture, { once: true });
+		document.addEventListener("touchstart", onFirstUserGesture, { once: true });
+
+		return () => {
+			if (timer) clearTimeout(timer);
+			document.removeEventListener("pointerdown", onFirstUserGesture);
+			document.removeEventListener("keydown", onFirstUserGesture);
+			document.removeEventListener("touchstart", onFirstUserGesture);
+		};
+	}, []);
 	const [winner, setWinner] = useState<string | null>(null);
 	const [winnerIndex, setWinnerIndex] = useState<number | null>(null);
 	const [showDialog, setShowDialog] = useState(false);
@@ -638,6 +716,11 @@ export default function Home() {
 		}
 	};
 	const audioContextRef = useRef<AudioContext | null>(null);
+	// audio load state refs for lazy decode/scheduling
+	const audioLoadedRef = useRef<boolean>(false);
+	const audioLoadScheduledRef = useRef<any>(null);
+	// holder for the ensureAudioLoaded function created inside the audio init effect
+	const ensureAudioLoadedRef = useRef<(() => Promise<void>) | null>(null);
 	const lastSegmentRef = useRef<number>(-1);
 	// dynamic deceleration extension (ms) used to allow the wheel to keep slowing until speed ~ 0
 	const decelExtensionRef = useRef<number>(0);
@@ -645,8 +728,68 @@ export default function Home() {
 	const winningBuffersRef = useRef<Map<string, AudioBuffer>>(new Map());
 	const spinBuffersRef = useRef<Map<string, AudioBuffer>>(new Map());
 
+	// Play a single tick using the selected spin buffer (if present)
+	const playTick = useCallback(() => {
+		try {
+			const buffer = audioBufferRef.current;
+			if (!buffer || !audioContextRef.current) return;
+			playBufferSoftly(buffer, {
+				gain: 0.45,
+				cutoff: 7000,
+				attack: 0.005,
+				release: 0.1,
+			});
+		} catch (e) {
+			console.warn("playTick failed:", e);
+		}
+	}, []);
+
+	// Wrapper to expose the ensureAudioLoaded function safely to children
+	const ensureAudioLoaded = useCallback(async () => {
+		if (ensureAudioLoadedRef.current) {
+			try {
+				await ensureAudioLoadedRef.current();
+			} catch (e) {
+				console.warn("ensureAudioLoaded failed:", e);
+			}
+		}
+	}, []);
+
+	// Preview handlers for WheelClient
+	const previewTick = useCallback(async () => {
+		try {
+			await ensureAudioLoaded();
+			playTick();
+		} catch (e) {
+			console.warn("previewTick failed:", e);
+		}
+	}, [ensureAudioLoaded, playTick]);
+
+	const previewWinner = useCallback(async () => {
+		try {
+			await ensureAudioLoaded();
+			const buf = winningBuffersRef.current.get(winningSound);
+			if (buf) {
+				playBufferSoftly(buf, {
+					gain: 0.9,
+					cutoff: 5000,
+					attack: 0.02,
+					release: 0.6,
+				});
+			} else {
+				console.warn("No winning buffer available for preview:", winningSound);
+			}
+		} catch (e) {
+			console.warn("previewWinner failed:", e);
+		}
+	}, [ensureAudioLoaded, winningSound]);
+
 	// textarea controls for per-line delete icon
 	const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+	// Shared canvas and cache for text measurement to avoid recreating canvas/context
+	const measureCanvasRef = useRef<HTMLCanvasElement | null>(null);
+	const measureCacheRef = useRef<Map<string, number>>(new Map());
 
 	// refs for advanced-mode per-line inputs, keyed by original index after render
 	const advancedInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
@@ -796,17 +939,48 @@ export default function Home() {
 		// SSR-safe: if no DOM, return a conservative width estimate
 		if (typeof document === "undefined" || typeof window === "undefined" || !el)
 			return Math.max(12, text.length * 9 + 4);
-		const canvas = document.createElement("canvas");
-		const ctx = canvas.getContext("2d");
-		if (!ctx || !el) return Math.max(12, text.length * 9 + 4);
-		const style = window.getComputedStyle(el);
-		const fontStyle = style.fontStyle || "normal";
-		const fontWeight = style.fontWeight || "400";
-		const fontSize = style.fontSize || "18px";
-		const fontFamily = style.fontFamily || "sans-serif";
-		ctx.font = `${fontStyle} ${fontWeight} ${fontSize} ${fontFamily}`;
-		const w = ctx.measureText(text).width;
-		return Math.max(12, w + 4);
+
+		// Use a shared canvas + cache to avoid creating contexts repeatedly.
+		try {
+			let canvas = measureCanvasRef.current;
+			if (!canvas) {
+				canvas = document.createElement("canvas");
+				measureCanvasRef.current = canvas;
+			}
+			const ctx = canvas.getContext("2d");
+			if (!ctx) return Math.max(12, text.length * 9 + 4);
+			const style = window.getComputedStyle(el);
+			const fontStyle = style.fontStyle || "normal";
+			const fontWeight = style.fontWeight || "400";
+			const fontSize = style.fontSize || "18px";
+			const fontFamily = style.fontFamily || "sans-serif";
+			const key = `${fontStyle}|${fontWeight}|${fontSize}|${fontFamily}::${text}`;
+			const cache = measureCacheRef.current;
+			if (cache.has(key)) {
+				// move to recent
+				const v = cache.get(key)!;
+				cache.delete(key);
+				cache.set(key, v);
+				return v;
+			}
+			ctx.font = `${fontStyle} ${fontWeight} ${fontSize} ${fontFamily}`;
+			const w = ctx.measureText(text).width;
+			const val = Math.max(12, w + 4);
+			cache.set(key, val);
+			// simple cap to avoid unbounded memory use
+			if (cache.size > 1000) {
+				// delete oldest 200 entries
+				const it = cache.keys();
+				for (let i = 0; i < 200; i++) {
+					const k = it.next();
+					if (k.done) break;
+					cache.delete(k.value);
+				}
+			}
+			return val;
+		} catch (e) {
+			return Math.max(12, text.length * 9 + 4);
+		}
 	};
 
 	const updateFocusedLine = () => {
@@ -1481,7 +1655,7 @@ export default function Home() {
 				console.log("✅ Drum roll loaded");
 
 				// Preload all winning sounds
-				console.log("📥 Loading winning sounds...");
+				// Defer audio loading: wrap in a function so we can load on-demand
 				const winningFiles = [
 					"cheering-crowd-whistle",
 					"fanfare-announcement",
@@ -1493,23 +1667,6 @@ export default function Home() {
 					"yes-victory",
 				];
 
-				const bufferMap = new Map<string, AudioBuffer>();
-				await Promise.all(
-					winningFiles.map(async (fileName) => {
-						try {
-							const response = await fetch(`/sounds/winning/${fileName}.mp3`);
-							const arrayBuffer = await response.arrayBuffer();
-							const buffer = await audioContext.decodeAudioData(arrayBuffer);
-							bufferMap.set(fileName, buffer);
-						} catch (err) {
-							console.warn(`Failed to load ${fileName}:`, err);
-						}
-					})
-				);
-				winningBuffersRef.current = bufferMap;
-
-				// Preload all spin sounds
-				console.log("📥 Loading spin sounds...");
 				const spinSoundFiles = [
 					"alarm-beep-2",
 					"alarm-clock-beep",
@@ -1534,35 +1691,90 @@ export default function Home() {
 					"wall-clock-tock",
 				];
 
-				const spinBufferMap = new Map<string, AudioBuffer>();
-				await Promise.all(
-					spinSoundFiles.map(async (fileName) => {
-						try {
-							const response = await fetch(`/sounds/spin/${fileName}.mp3`);
-							const arrayBuffer = await response.arrayBuffer();
-							const buffer = await audioContext.decodeAudioData(arrayBuffer);
-							spinBufferMap.set(fileName, buffer);
-						} catch (err) {
-							console.warn(`Failed to load spin sound ${fileName}:`, err);
-						}
-					})
-				);
-				spinBuffersRef.current = spinBufferMap;
-				console.log(
-					"✅ Loaded",
-					spinBufferMap.size,
-					"spin sounds:",
-					Array.from(spinBufferMap.keys())
-				);
+				const loadAudioBuffers = async () => {
+					try {
+						if (!audioContextRef.current) return;
+						const audioContext = audioContextRef.current;
+						// Winning sounds
+						const bufferMap = new Map<string, AudioBuffer>();
+						await Promise.all(
+							winningFiles.map(async (fileName) => {
+								try {
+									const response = await fetch(
+										`/sounds/winning/${fileName}.mp3`
+									);
+									const arrayBuffer = await response.arrayBuffer();
+									const buffer = await audioContext.decodeAudioData(
+										arrayBuffer
+									);
+									bufferMap.set(fileName, buffer);
+								} catch (err) {
+									console.warn(`Failed to load ${fileName}:`, err);
+								}
+							})
+						);
+						winningBuffersRef.current = bufferMap;
 
-				// Set initial spin sound (default: single-spin)
-				const defaultSpinBuffer = spinBufferMap.get("single-spin");
-				if (defaultSpinBuffer) {
-					audioBufferRef.current = defaultSpinBuffer;
-					console.log("🔊 Initial wheel spin sound set to: single-spin");
-				} else {
-					console.error("❌ Failed to load default spin sound: single-spin");
-				}
+						// Spin sounds
+						const spinBufferMap = new Map<string, AudioBuffer>();
+						await Promise.all(
+							spinSoundFiles.map(async (fileName) => {
+								try {
+									const response = await fetch(`/sounds/spin/${fileName}.mp3`);
+									const arrayBuffer = await response.arrayBuffer();
+									const buffer = await audioContext.decodeAudioData(
+										arrayBuffer
+									);
+									spinBufferMap.set(fileName, buffer);
+								} catch (err) {
+									console.warn(`Failed to load spin ${fileName}:`, err);
+								}
+							})
+						);
+						spinBuffersRef.current = spinBufferMap;
+						audioLoadedRef.current = true;
+					} catch (err) {
+						console.warn("Audio load failed", err);
+					}
+				};
+
+				// schedule a low-priority audio load after a short delay
+				const scheduleAudioLoad = () => {
+					if (audioLoadScheduledRef.current) return;
+					if (typeof (window as any).requestIdleCallback === "function") {
+						audioLoadScheduledRef.current = (window as any).requestIdleCallback(
+							() => {
+								loadAudioBuffers();
+								audioLoadScheduledRef.current = null;
+							},
+							{ timeout: 2000 }
+						);
+					} else {
+						audioLoadScheduledRef.current = window.setTimeout(() => {
+							loadAudioBuffers();
+							audioLoadScheduledRef.current = null;
+						}, 1500);
+					}
+				};
+
+				const ensureAudioLoaded = async () => {
+					if (audioLoadedRef.current) return;
+					if (audioLoadScheduledRef.current) {
+						if (typeof (window as any).cancelIdleCallback === "function") {
+							(window as any).cancelIdleCallback(audioLoadScheduledRef.current);
+						} else {
+							clearTimeout(audioLoadScheduledRef.current as number);
+						}
+						audioLoadScheduledRef.current = null;
+					}
+					await loadAudioBuffers();
+				};
+
+				// expose the loader to other components (Navbar) via ref
+				ensureAudioLoadedRef.current = ensureAudioLoaded;
+
+				// kick off a low-priority load
+				scheduleAudioLoad();
 			} catch (error) {
 				console.error("Audio initialization failed:", error);
 			}
@@ -2658,6 +2870,91 @@ export default function Home() {
 	// adding drawWheel to their dependency arrays (which would cause re-runs).
 	const drawWheelRef = useRef<() => void>(() => {});
 
+	// Winner worker: incremental offload for winner selection
+	const winnerWorkerRef = useRef<Worker | null>(null);
+	const winnerRequestIdRef = useRef(0);
+	const namesListRef = useRef<string[]>([]);
+
+	// Precomputed cumulative segment starts (degrees) to avoid recomputing
+	// weights and accumulating them on every animation frame.
+	const cumulativeAnglesRef = useRef<{
+		starts: number[];
+		total: number;
+	} | null>(null);
+
+	useEffect(() => {
+		namesListRef.current = names
+			? names.split("\n").filter((s) => s.trim() !== "")
+			: [];
+	}, [names]);
+
+	// Recompute cumulative start angles when names or weights change.
+	useEffect(() => {
+		const nl = names ? names.split("\n").filter((s) => s.trim() !== "") : [];
+		if (nl.length === 0) {
+			cumulativeAnglesRef.current = { starts: [], total: 0 };
+			return;
+		}
+
+		const weights = nl.map((_, i) => {
+			const id = lineIds[i];
+			const w = id
+				? partitionWeightsByIdRef.current[id] ?? partitionWeightsRef.current[i]
+				: partitionWeightsRef.current[i];
+			return Number(w ?? 1);
+		});
+		const total = Math.max(
+			1,
+			weights.reduce((a, b) => a + b, 0)
+		);
+		const starts: number[] = [];
+		let acc = 0;
+		for (let i = 0; i < weights.length; i++) {
+			starts.push(acc);
+			acc += (weights[i] / total) * 360;
+		}
+		cumulativeAnglesRef.current = { starts, total };
+
+		// Also inform the worker of precomputed starts so it can determine winners
+		try {
+			const w = winnerWorkerRef.current;
+			if (w) {
+				w.postMessage({ type: "precompute", starts, total });
+			}
+		} catch {}
+	}, [names, partitionWeights, partitionWeightsById, lineIds]);
+
+	useEffect(() => {
+		// create worker from public path if available
+		try {
+			if (typeof window !== "undefined") {
+				winnerWorkerRef.current = new Worker("/workers/winner.worker.js");
+				winnerWorkerRef.current.onmessage = (ev) => {
+					const msg = ev.data || {};
+					if (msg && typeof msg.winner === "number") {
+						const idx = msg.winner;
+						const nl = namesListRef.current || [];
+						if (nl.length === 0) return;
+						const name = nl[idx] ?? "";
+						try {
+							setWinner(name);
+							setWinnerIndex(idx);
+							setShowDialog(true);
+						} catch {}
+					}
+				};
+			}
+		} catch {}
+		return () => {
+			try {
+				if (winnerWorkerRef.current) {
+					winnerWorkerRef.current.terminate();
+					winnerWorkerRef.current = null;
+				}
+			} catch {}
+		};
+	}, []);
+
 	useEffect(() => {
 		drawWheelRef.current = drawWheel;
 		drawWheel();
@@ -2774,8 +3071,7 @@ export default function Home() {
 		(finalRotation: number) => {
 			if (namesList.length === 0) return;
 
-			// Compute weights (id-keyed first, then index) and find which
-			// partition contains the adjusted rotation angle.
+			// Compute weights (id-keyed first, then index)
 			const weights = namesList.map((_, i) => {
 				const id = lineIds[i];
 				const w = id
@@ -2784,15 +3080,31 @@ export default function Home() {
 					: partitionWeightsRef.current[i];
 				return Number(w ?? 1);
 			});
+
+			// If the worker is available, offload the winner determination.
+			try {
+				const w = winnerWorkerRef.current;
+				if (w) {
+					const id = ++winnerRequestIdRef.current;
+					w.postMessage({
+						type: "determine",
+						id,
+						weights,
+						rotation: finalRotation,
+					});
+					// worker will respond and set winner via its message handler
+					return;
+				}
+			} catch (e) {
+				// fall back to synchronous calculation below
+			}
+
+			// Fallback: synchronous calculation on main thread
 			const totalWeight = Math.max(
 				1,
 				weights.reduce((a, b) => a + b, 0)
 			);
-
-			// The arrow points to the right (0 degrees). Convert finalRotation
-			// into an angle in degrees pointing at the wheel and find the slice.
 			const adjustedRotation = (360 - (finalRotation % 360)) % 360;
-
 			let acc = 0;
 			let winnerIndex = 0;
 			for (let i = 0; i < namesList.length; i++) {
@@ -2811,9 +3123,25 @@ export default function Home() {
 		[namesList, lineIds, partitionWeights, partitionWeightsById]
 	);
 
-	const spinWheel = useCallback(() => {
+	const spinWheel = useCallback(async () => {
 		// disable initial auto-spin when user triggers a manual spin
 		setAutoSpinActive(false);
+
+		// Warm/resume audio on first user gesture so tick sounds play reliably.
+		try {
+			await ensureAudioLoaded();
+			const audioContext = audioContextRef.current;
+			if (audioContext && audioContext.state === "suspended") {
+				await audioContext.resume();
+			}
+			const sel = spinBuffersRef.current.get(spinSound);
+			if (sel) audioBufferRef.current = sel;
+			try {
+				playTick();
+			} catch (e) {}
+		} catch (e) {
+			console.warn("spin audio init failed:", e);
+		}
 		if (spinning) return;
 		if (namesList.length === 0) {
 			setShowEmptyNamesWarn(true);
@@ -2948,32 +3276,52 @@ export default function Home() {
 			// modulo only when needed elsewhere (e.g. winner calc).
 			setRotation(currentRotation);
 
-			// Detect segment change and play sound (use weighted segments)
+			// Detect segment change and play sound (use precomputed cumulative starts when available)
 			const adjustedRotation = (360 - (currentRotation % 360)) % 360;
-			const weightsForDetect = namesList.map((_, i) => {
-				const id = lineIds[i];
-				const w = id
-					? partitionWeightsByIdRef.current[id] ??
-					  partitionWeightsRef.current[i]
-					: partitionWeightsRef.current[i];
-				return Number(w ?? 1);
-			});
-			const totalWForDetect = Math.max(
-				1,
-				weightsForDetect.reduce((a, b) => a + b, 0)
-			);
-			let accForDetect = 0;
 			let currentSegment = 0;
-			for (let i = 0; i < namesList.length; i++) {
-				const segDeg = (weightsForDetect[i] / totalWForDetect) * 360;
-				if (
-					adjustedRotation >= accForDetect &&
-					adjustedRotation < accForDetect + segDeg
-				) {
-					currentSegment = i;
-					break;
+			const cum = cumulativeAnglesRef.current;
+			if (cum && cum.starts && cum.starts.length === namesList.length) {
+				// binary-search the largest start <= adjustedRotation
+				const starts = cum.starts;
+				let lo = 0;
+				let hi = starts.length - 1;
+				let idx = 0;
+				while (lo <= hi) {
+					const mid = (lo + hi) >> 1;
+					if (starts[mid] <= adjustedRotation) {
+						idx = mid;
+						lo = mid + 1;
+					} else {
+						hi = mid - 1;
+					}
 				}
-				accForDetect += segDeg;
+				currentSegment = idx;
+			} else {
+				// fallback: compute weights on the fly (original behavior)
+				const weightsForDetect = namesList.map((_, i) => {
+					const id = lineIds[i];
+					const w = id
+						? partitionWeightsByIdRef.current[id] ??
+						  partitionWeightsRef.current[i]
+						: partitionWeightsRef.current[i];
+					return Number(w ?? 1);
+				});
+				const totalWForDetect = Math.max(
+					1,
+					weightsForDetect.reduce((a, b) => a + b, 0)
+				);
+				let accForDetect = 0;
+				for (let i = 0; i < namesList.length; i++) {
+					const segDeg = (weightsForDetect[i] / totalWForDetect) * 360;
+					if (
+						adjustedRotation >= accForDetect &&
+						adjustedRotation < accForDetect + segDeg
+					) {
+						currentSegment = i;
+						break;
+					}
+					accForDetect += segDeg;
+				}
 			}
 
 			if (currentSegment !== lastSegmentRef.current) {
@@ -3732,6 +4080,11 @@ export default function Home() {
 				audioContextRef={audioContextRef}
 				winningBuffersRef={winningBuffersRef}
 				spinBuffersRef={spinBuffersRef}
+				ensureAudioLoaded={() =>
+					ensureAudioLoadedRef.current
+						? ensureAudioLoadedRef.current()
+						: Promise.resolve()
+				}
 			/>
 			{/* Color picker opens via a single hidden native input so the native
 				palette is shown using the browser's positioning (same technique as
@@ -3873,6 +4226,7 @@ export default function Home() {
 							</div>
 
 							{/* this is the actual wheel  */}
+							{/* Dev Wheel (dev-only) removed from UI */}
 							<div className="wheel-canvas-container md:p-8">
 								<canvas
 									ref={canvasRef}
@@ -3883,6 +4237,7 @@ export default function Home() {
 									onClick={spinWheel}
 								/>
 							</div>
+							{/* Dev Wheel (dynamic client) removed from UI. */}
 
 							{namesList.length === 0 && (
 								<p
@@ -4321,7 +4676,7 @@ export default function Home() {
 								</div>
 
 								<div className="flex justify-between w-full items-center px-2">
-									<DropdownMenu>
+									<DropdownMenu modal={false}>
 										<DropdownMenuTrigger asChild>
 											<button
 												type="button"
@@ -4340,7 +4695,7 @@ export default function Home() {
 											</button>
 										</DropdownMenuTrigger>
 
-										<DropdownMenuContent className="w-[360px] max-h-[320px] overflow-y-auto">
+										<DropdownMenuContent className="max-w-[360px] max-h-[320px] overflow-y-auto">
 											<div className="p-3">
 												<div className="flex items-center justify-between mb-3">
 													<p className="text-muted-foreground text-xs uppercase tracking-wide">

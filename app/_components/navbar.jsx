@@ -7,6 +7,7 @@ import React, {
 	useRef,
 	useState,
 } from "react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -34,16 +35,32 @@ import {
 	AccordionItem,
 	AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-	Image as ImageIcon,
-	Music,
-	Palette,
-	RotateCcw,
-	Timer,
-	Trophy,
-	Volume2,
-	UploadCloud,
-} from "lucide-react";
+const ImageIcon = dynamic(() => import("lucide-react/dist/esm/icons/image"), {
+	ssr: false,
+});
+const Music = dynamic(() => import("lucide-react/dist/esm/icons/music"), {
+	ssr: false,
+});
+const Palette = dynamic(() => import("lucide-react/dist/esm/icons/palette"), {
+	ssr: false,
+});
+const RotateCcw = dynamic(
+	() => import("lucide-react/dist/esm/icons/rotate-ccw"),
+	{ ssr: false }
+);
+const Timer = dynamic(() => import("lucide-react/dist/esm/icons/timer"), {
+	ssr: false,
+});
+const Trophy = dynamic(() => import("lucide-react/dist/esm/icons/trophy"), {
+	ssr: false,
+});
+const Volume2 = dynamic(() => import("lucide-react/dist/esm/icons/volume-2"), {
+	ssr: false,
+});
+const UploadCloud = dynamic(
+	() => import("lucide-react/dist/esm/icons/upload-cloud"),
+	{ ssr: false }
+);
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import localFont from "next/font/local";
@@ -107,6 +124,7 @@ const Navbar = ({
 	audioContextRef,
 	winningBuffersRef,
 	spinBuffersRef,
+	ensureAudioLoaded,
 }) => {
 	const [timerValue, setTimerValue] = useState(String(currentTimer));
 	const [winningSoundValue, setWinningSoundValue] =
@@ -161,7 +179,13 @@ const Navbar = ({
 	);
 
 	const previewSound = useCallback(
-		(soundName) => {
+		async (soundName) => {
+			// ensure audio buffers are decoded if not already
+			try {
+				if (typeof ensureAudioLoaded === "function") await ensureAudioLoaded();
+			} catch (e) {
+				console.warn("ensureAudioLoaded failed:", e);
+			}
 			// Stop any currently playing preview
 			if (previewSourceRef.current) {
 				try {
@@ -223,7 +247,13 @@ const Navbar = ({
 	}, [onWinningSoundChange, previewSound]);
 
 	const previewSpinSound = useCallback(
-		(soundName) => {
+		async (soundName) => {
+			// ensure audio buffers are decoded if not already
+			try {
+				if (typeof ensureAudioLoaded === "function") await ensureAudioLoaded();
+			} catch (e) {
+				console.warn("ensureAudioLoaded failed:", e);
+			}
 			// Stop any currently playing preview
 			if (previewSourceRef.current) {
 				try {
