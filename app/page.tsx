@@ -3732,6 +3732,15 @@ export default function Home() {
 				audioContextRef={audioContextRef}
 				winningBuffersRef={winningBuffersRef}
 				spinBuffersRef={spinBuffersRef}
+				ensureAudioLoaded={async () => {
+					// Best-effort: resume AudioContext if it's suspended so Navbar can rely on audio being available.
+					try {
+						const ac = audioContextRef.current;
+						if (ac && ac.state === "suspended") {
+							await ac.resume();
+						}
+					} catch {}
+				}}
 			/>
 			{/* Color picker opens via a single hidden native input so the native
 				palette is shown using the browser's positioning (same technique as
