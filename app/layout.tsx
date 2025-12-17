@@ -80,15 +80,16 @@ export default function RootLayout({
 			<body
 				className={`${geistSans.variable} ${geistMono.variable} ${masque.variable} antialiased `}
 			>
-				{children}
+				<div className="flex min-h-screen flex-col">
+					<main className="flex-1">{children}</main>
 
-				{/* Google Analytics is consent-gated: we expose a loader function and only
+					{/* Google Analytics is consent-gated: we expose a loader function and only
 					inject the real gtag.js when the site has explicit analytics consent.
 					This prevents GA from loading on first view and reduces initial JS execution. */}
-				{ga && (
-					<>
-						<Script id="gtag-consent-gate" strategy="lazyOnload">
-							{`
+					{ga && (
+						<>
+							<Script id="gtag-consent-gate" strategy="lazyOnload">
+								{`
 								(function(){
 									window.dataLayer = window.dataLayer || [];
 									function gtag(){dataLayer.push(arguments);} 
@@ -118,11 +119,12 @@ export default function RootLayout({
 									}catch(e){}
 								})();
 							`}
-						</Script>
-					</>
-				)}
+							</Script>
+						</>
+					)}
 
-				<Footer />
+					<Footer />
+				</div>
 			</body>
 		</html>
 	);

@@ -36,7 +36,7 @@ export default function AboutUsPage() {
 			<div className="min-h-screen py-12 px-4">
 				<div className="container mx-auto max-w-4xl">
 					<h1
-						className={`text-3xl text-slate-600  tracking-wider mb-6 ${adalima.className}`}
+						className={`text-2xl text-slate-600  tracking-wider mb-6 ${adalima.className}`}
 					>
 						About SpinWheelQuiz
 					</h1>
@@ -50,7 +50,7 @@ export default function AboutUsPage() {
 						</p>
 
 						<h2
-							className={`text-2xl tracking-wide font-medium text-slate-600 mb-4 ${adalima.className}`}
+							className={`text-xl tracking-wide font-medium text-slate-600 mb-4 ${adalima.className}`}
 						>
 							Our Mission
 						</h2>
@@ -62,7 +62,7 @@ export default function AboutUsPage() {
 						</p>
 
 						<h2
-							className={`text-2xl tracking-wide font-medium text-slate-600 mb-4 ${adalima.className}`}
+							className={`text-xl tracking-wide font-medium text-slate-600 mb-4 ${adalima.className}`}
 						>
 							What We Offer
 						</h2>
@@ -103,7 +103,7 @@ export default function AboutUsPage() {
 						</ul>
 
 						<h2
-							className={`text-2xl tracking-wide font-medium text-slate-600 mb-4 ${adalima.className}`}
+							className={`text-xl tracking-wide font-medium text-slate-600 mb-4 ${adalima.className}`}
 						>
 							Why Choose SpinWheelQuiz?
 						</h2>
@@ -127,7 +127,7 @@ export default function AboutUsPage() {
 						</ul>
 
 						<h2
-							className={`text-2xl tracking-wide font-medium text-slate-600 mb-4 ${adalima.className}`}
+							className={`text-xl tracking-wide font-medium text-slate-600 mb-4 ${adalima.className}`}
 						>
 							Our Commitment
 						</h2>

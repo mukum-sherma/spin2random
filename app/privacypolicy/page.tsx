@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
 import NavbarBanner from "../_components/navbar-banner";
+import localFont from "next/font/local";
+
+const adalima = localFont({
+	src: "../_fonts/adalima.ttf",
+	variable: "--font-adalima",
+});
 
 export const metadata: Metadata = {
 	title: "Privacy Policy",
@@ -13,7 +19,9 @@ export default function PrivacyPolicyPage() {
 			<NavbarBanner />
 			<div className="min-h-screen py-12 px-4">
 				<div className="container mx-auto max-w-4xl">
-					<h1 className="text-3xl font-bold text-slate-800 mb-4">
+					<h1
+						className={`text-2xl tracking-wide font-medium text-slate-600 mb-4 ${adalima.className}`}
+					>
 						Privacy Policy
 					</h1>
 					{/* <p className="text-slate-600 mb-8">
@@ -22,7 +30,9 @@ export default function PrivacyPolicyPage() {
 
 					<div className="space-y-8 text-slate-700 leading-relaxed">
 						<section>
-							<h2 className="text-2xl font-semibold text-slate-800 mb-3">
+							<h2
+								className={`text-xl tracking-wide font-medium text-slate-600 mb-3 ${adalima.className}`}
+							>
 								1. Introduction
 							</h2>
 							<p>
@@ -36,10 +46,14 @@ export default function PrivacyPolicyPage() {
 						</section>
 
 						<section>
-							<h2 className="text-2xl font-semibold text-slate-800 mb-3">
+							<h2
+								className={`text-xl tracking-wide font-medium text-slate-600 mb-3 ${adalima.className}`}
+							>
 								2. Information We Collect
 							</h2>
-							<h3 className="text-xl font-semibold text-slate-700 mt-4 mb-2">
+							<h3
+								className={`text-lg tracking-wide font-medium text-slate-700 mt-4 mb-2 ${adalima.className}`}
+							>
 								2.1 Information You Provide
 							</h3>
 							<p>
@@ -56,7 +70,9 @@ export default function PrivacyPolicyPage() {
 								other information you choose to provide.
 							</p>
 
-							<h3 className="text-xl font-semibold text-slate-700 mt-4 mb-2">
+							<h3
+								className={`text-lg tracking-wide font-medium text-slate-700 mt-4 mb-2 ${adalima.className}`}
+							>
 								2.2 Automatically Collected Information
 							</h3>
 							<p>
@@ -73,7 +89,9 @@ export default function PrivacyPolicyPage() {
 						</section>
 
 						<section>
-							<h2 className="text-2xl font-semibold text-slate-800 mb-3">
+							<h2
+								className={`text-xl tracking-wide font-medium text-slate-600 mb-3 ${adalima.className}`}
+							>
 								3. How We Use Your Information
 							</h2>
 							<p>We use the information we collect to:</p>
@@ -90,7 +108,9 @@ export default function PrivacyPolicyPage() {
 						</section>
 
 						<section>
-							<h2 className="text-2xl font-semibold text-slate-800 mb-3">
+							<h2
+								className={`text-xl tracking-wide font-medium text-slate-600 mb-3 ${adalima.className}`}
+							>
 								4. Cookies and Tracking Technologies
 							</h2>
 							<p>
@@ -108,7 +128,9 @@ export default function PrivacyPolicyPage() {
 						</section>
 
 						<section>
-							<h2 className="text-2xl font-semibold text-slate-800 mb-3">
+							<h2
+								className={`text-xl tracking-wide font-medium text-slate-600 mb-3 ${adalima.className}`}
+							>
 								5. Third-Party Services
 							</h2>
 							<p>
@@ -133,7 +155,9 @@ export default function PrivacyPolicyPage() {
 						</section>
 
 						<section>
-							<h2 className="text-2xl font-semibold text-slate-800 mb-3">
+							<h2
+								className={`text-xl tracking-wide font-medium text-slate-600 mb-3 ${adalima.className}`}
+							>
 								6. Data Security
 							</h2>
 							<p>
@@ -147,7 +171,9 @@ export default function PrivacyPolicyPage() {
 						</section>
 
 						<section>
-							<h2 className="text-2xl font-semibold text-slate-800 mb-3">
+							<h2
+								className={`text-xl tracking-wide font-medium text-slate-600 mb-3 ${adalima.className}`}
+							>
 								7. Your Rights
 							</h2>
 							<p>You have the right to:</p>
@@ -167,7 +193,9 @@ export default function PrivacyPolicyPage() {
 						</section>
 
 						<section>
-							<h2 className="text-2xl font-semibold text-slate-800 mb-3">
+							<h2
+								className={`text-xl tracking-wide font-medium text-slate-600 mb-3 ${adalima.className}`}
+							>
 								8. Children&apos;s Privacy
 							</h2>
 							<p>
@@ -183,7 +211,9 @@ export default function PrivacyPolicyPage() {
 						</section>
 
 						<section>
-							<h2 className="text-2xl font-semibold text-slate-800 mb-3">
+							<h2
+								className={`text-xl tracking-wide font-medium text-slate-600 mb-3 ${adalima.className}`}
+							>
 								9. Changes to This Privacy Policy
 							</h2>
 							<p>
@@ -196,7 +226,9 @@ export default function PrivacyPolicyPage() {
 						</section>
 
 						<section>
-							<h2 className="text-2xl font-semibold text-slate-800 mb-3">
+							<h2
+								className={`text-xl tracking-wide font-medium text-slate-600 mb-3 ${adalima.className}`}
+							>
 								10. Contact Us
 							</h2>
 							<p>
