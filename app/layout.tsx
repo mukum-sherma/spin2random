@@ -67,6 +67,12 @@ export default function RootLayout({
 					name="google-adsense-account"
 					content="ca-pub-9815804917269409"
 				></meta>
+				{/* Load AdSense non-blocking (lazy) */}
+				<Script
+					src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9815804917269409"
+					strategy="lazyOnload"
+					crossOrigin="anonymous"
+				/>
 				{/* Preload main banner used in header / social preview to improve LCP */}
 				<link rel="preload" as="image" href="/banner.webp" />
 				<link rel="icon" href="/favicon.ico" />
