@@ -573,6 +573,14 @@ export default function Home() {
 	const wheelSectionRef = useRef<HTMLDivElement>(null);
 	// loaded image bitmap for faster drawing into the canvas (per-segment clipping)
 	const wheelImageBitmapRef = useRef<ImageBitmap | null>(null);
+	const imageWorkerRef = useRef<Worker | null>(null);
+	const bitmapRequestIdRef = useRef(1);
+	const bitmapResolversRef = useRef<
+		Map<
+			number,
+			{ resolve: (bmp: ImageBitmap) => void; reject: (err: unknown) => void }
+		>
+	>(new Map());
 	const audioBufferRef = useRef<AudioBuffer | null>(null);
 
 	// Snapshot for recently removed entry to support Undo
@@ -758,6 +766,72 @@ export default function Home() {
 			return 20;
 		}
 	};
+
+	useEffect(() => {
+		if (typeof window === "undefined") return;
+		const worker = new Worker("/workers/image-bitmap.js");
+		imageWorkerRef.current = worker;
+		const handleMessage = (ev: MessageEvent) => {
+			const data = ev.data as {
+				id?: number;
+				bitmap?: ImageBitmap;
+				error?: unknown;
+			};
+			if (!data?.id) return;
+			const pending = bitmapResolversRef.current.get(data.id);
+			if (!pending) return;
+			bitmapResolversRef.current.delete(data.id);
+			if (data.bitmap) pending.resolve(data.bitmap);
+			else pending.reject(data.error ?? "decode failed");
+		};
+		worker.addEventListener("message", handleMessage);
+		return () => {
+			worker.removeEventListener("message", handleMessage);
+			worker.terminate();
+			imageWorkerRef.current = null;
+			bitmapResolversRef.current.clear();
+		};
+	}, []);
+
+	const decodeImageBitmap = useCallback(
+		async (src: string): Promise<ImageBitmap> => {
+			if (typeof window === "undefined") {
+				throw new Error("decode unavailable during SSR");
+			}
+			const worker = imageWorkerRef.current;
+			if (!worker) {
+				const res = await fetch(src);
+				const blob = await res.blob();
+				return createImageBitmap(blob);
+			}
+			const reqId = bitmapRequestIdRef.current++;
+			return new Promise<ImageBitmap>((resolve, reject) => {
+				const timeout = window.setTimeout(() => {
+					if (!bitmapResolversRef.current.has(reqId)) return;
+					bitmapResolversRef.current.delete(reqId);
+					reject(new Error("image decode timed out"));
+				}, 15000);
+				bitmapResolversRef.current.set(reqId, {
+					resolve: (bmp) => {
+						window.clearTimeout(timeout);
+						resolve(bmp);
+					},
+					reject: (err) => {
+						window.clearTimeout(timeout);
+						reject(err);
+					},
+				});
+				try {
+					worker.postMessage({ id: reqId, src });
+				} catch (err) {
+					window.clearTimeout(timeout);
+					bitmapResolversRef.current.delete(reqId);
+					reject(err);
+				}
+			});
+		},
+		[]
+	);
 
 	const getTextareaPaddingLeft = () => {
 		const el = textareaRef.current;
@@ -2681,24 +2755,30 @@ export default function Home() {
 		// existing bitmap upfront — keep it visible until the new image is ready.
 		(async () => {
 			try {
-				const res = await fetch(wheelImageSrc as string);
-				const blob = await res.blob();
-				const bitmap = await createImageBitmap(blob);
-				if (mounted) {
+				let bitmap: ImageBitmap | null = null;
+				try {
+					bitmap = await decodeImageBitmap(wheelImageSrc as string);
+				} catch (workerErr) {
+					console.warn(
+						"Worker decode failed, falling back to main thread",
+						workerErr
+					);
+					const res = await fetch(wheelImageSrc as string);
+					const blob = await res.blob();
+					bitmap = await createImageBitmap(blob);
+				}
+				if (mounted && bitmap) {
 					wheelImageBitmapRef.current = bitmap;
-					// compute contrast color for the selected image and update wheel text color
 					try {
 						const contrast = computeContrastFromBitmap(bitmap);
 						setWheelTextColor(contrast);
 					} catch (err) {
 						console.warn("Failed to compute contrast for wheel image:", err);
 					}
-					// redraw wheel now that bitmap is ready using the latest draw function
 					drawWheelRef.current?.();
 				}
 			} catch (err) {
 				console.warn("Failed to load wheel image:", err);
-				// leave previous bitmap (if any) in place; attempt redraw
 				drawWheelRef.current?.();
 			}
 		})();
@@ -2706,7 +2786,7 @@ export default function Home() {
 		return () => {
 			mounted = false;
 		};
-	}, [wheelImageSrc]);
+	}, [wheelImageSrc, decodeImageBitmap]);
 
 	// Load any partition images into ImageBitmaps for faster drawing (id-keyed)
 	useEffect(() => {
@@ -2727,18 +2807,22 @@ export default function Home() {
 		(async () => {
 			for (const [id, src] of toLoad) {
 				try {
-					// re-check that the requested src is still the active one for this id/index
 					const currentIdx = (lineIdsRef.current ?? []).indexOf(id);
 					const currentSrc =
 						currentIdx >= 0
 							? partitionImagesById[id] ?? partitionImages[currentIdx]
 							: partitionImagesById[id];
 					if (currentSrc !== src) continue;
-					const res = await fetch(src);
-					const blob = await res.blob();
-					const bmp = await createImageBitmap(blob);
-					if (!mounted) break;
-					// Another guard: ensure the src hasn't changed while we fetched/decoded
+					let bmp: ImageBitmap | null = null;
+					try {
+						bmp = await decodeImageBitmap(src);
+					} catch (workerErr) {
+						console.warn("Worker decode failed for partition image", workerErr);
+						const res = await fetch(src);
+						const blob = await res.blob();
+						bmp = await createImageBitmap(blob);
+					}
+					if (!mounted || !bmp) break;
 					const stillSrc =
 						currentIdx >= 0
 							? partitionImagesById[id] ?? partitionImages[currentIdx]
@@ -2751,7 +2835,6 @@ export default function Home() {
 						continue;
 					}
 					partitionImageBitmapByIdRef.current[id] = bmp;
-					// record the blob url as the active one for this id
 					partitionImageBlobUrlsByIdRef.current[id] = src;
 					try {
 						partitionImageContrastByIdRef.current[id] =
@@ -2768,7 +2851,7 @@ export default function Home() {
 		return () => {
 			mounted = false;
 		};
-	}, [partitionImagesById, partitionImages, lineIds]);
+	}, [partitionImagesById, partitionImages, lineIds, decodeImageBitmap]);
 
 	const determineWinner = useCallback(
 		(finalRotation: number) => {
@@ -4458,9 +4541,9 @@ export default function Home() {
 								</div>
 
 								{/* Normal mode  */}
-								<div className="relative max-h-[1500px] w-full overflow-hidden">
+								<div className="relative max-h-[1500px] w-full overflow-hidden ">
 									{!advancedMode ? (
-										<div className="relative w-full">
+										<div className="relative w-full ">
 											<textarea
 												ref={textareaRef}
 												value={names}
@@ -4470,14 +4553,8 @@ export default function Home() {
 												onSelect={() => setTimeout(updateFocusedLine, 0)}
 												onScroll={() => setControlsTick((t) => t + 1)}
 												aria-label="Edit names, one per line"
-												className="w-full z-20 resize-none whitespace-pre rounded-[7px] bg-gray-50 text-gray-800 text-[18px] md:text-[19px] font-bold border-4 shadow-inner border-gray-300 px-3 pt-3 leading-7 focus:outline-none"
+												className="w-full min-h-[500px] md:min-h-[700px] max-h-[500px] md:max-h-[700px] z-20 resize-none whitespace-pre rounded-[7px] bg-gray-50 text-gray-800 text-[18px] md:text-[19px] font-bold border-4 shadow-inner border-gray-300 px-3 pt-3 leading-7 focus:outline-none"
 												style={{
-													width: "100%",
-													height: textareaSize.height
-														? textareaSize.height + "px"
-														: undefined,
-													minHeight: "500px",
-													maxHeight: "700px",
 													overflowY: "auto",
 													paddingRight: ICON_DIV_WIDTH + 24,
 												}}
@@ -4603,42 +4680,13 @@ export default function Home() {
 													);
 												})}
 											</div>
-
-											{/* <div className="w-full flex justify-center gap-2 rounded-sm z-0 relative -mt-[10.2px]">
-												<div className="bg-gray-50 pb-2 pt-3 px-4 rounded-b-md flex gap-2 border-b-5 border-l-5 border-r-5 border-gray-300">
-													<button
-														type="button"
-														disabled={!hasNames}
-														onClick={(e) => {
-															// Normal mode should show confirmation dialog
-															e.preventDefault();
-															e.stopPropagation();
-															if (!hasNames) return;
-															setResetDialogVariant("normal");
-															setShowResetConfirm(true);
-														}}
-														className="flex items-center gap-2 px-2 py- rounded bg-red-500 text-white text-sm hover:bg-red-600 shadow disabled:opacity-30 disabled:cursor-not-allowed"
-													>
-														<Trash2 size={16} />
-														<span>Reset</span>
-													</button>
-													<button
-														type="button"
-														onClick={handleUndo}
-														disabled={!canUndo}
-														className="px-2 py-1 text-gray-50 rounded bg-[#404040] text-sm hover:bg-gray-500 disabled:opacity-30 disabled:cursor-not-allowed shadow"
-													>
-														Undo
-													</button>
-												</div>
-											</div> */}
 										</div>
 									) : (
 										<>
 											<div
 												role="region"
 												aria-label="Advanced names editor"
-												className="w-full whitespace-pre rounded-[7px] bg-gray-50 text-gray-800 overflow-auto text-[18px] md:text-[19px] font-bold border-4 shadow-inner border-gray-300 px-2 pt-3 pb-8 leading-7"
+												className="w-full min-h-[500px] md:min-h-[700px] max-h-[500px] md:max-h-[700px] whitespace-pre rounded-[7px] bg-gray-50 text-gray-800 overflow-auto text-[18px] md:text-[19px] font-bold border-4 shadow-inner border-gray-300 px-2 pt-3 pb-8 leading-7"
 												onPointerDown={(e) => {
 													if (isEventInsideLine(e)) return;
 													// No rendered lines: reveal the area and force
@@ -4677,14 +4725,14 @@ export default function Home() {
 													e.stopPropagation();
 												}}
 												style={{
-													width: textareaSize.width
-														? textareaSize.width + "px"
-														: undefined,
-													height: textareaSize.height
-														? textareaSize.height + "px"
-														: undefined,
-													minHeight: "600px",
-													maxHeight: "700px",
+													// width: textareaSize.width
+													// 	? textareaSize.width + "px"
+													// 	: undefined,
+													// height: textareaSize.height
+													// 	? textareaSize.height + "px"
+													// 	: undefined,
+													// minHeight: "600px",
+													// maxHeight: "700px",
 													overflowY: "auto",
 													paddingBottom: "70px",
 												}}
@@ -4899,7 +4947,6 @@ export default function Home() {
 																		/>
 																		{/* <span className="text-xs">Color</span> */}
 																	</button>
-																	Undo
 																	<div className="flex ">
 																		<button
 																			type="button"
