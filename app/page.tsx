@@ -305,6 +305,59 @@ export default function Home() {
 		};
 	}, [paletteOpenFor]);
 
+	// Reposition slider (weight) popover on scroll/resize so it stays anchored
+	useEffect(() => {
+		if (sliderOpenFor === null) return;
+		let raf = 0;
+		const update = () => {
+			if (!sliderAnchorRef.current || !sliderRef.current) return;
+			const r = sliderAnchorRef.current.getBoundingClientRect();
+			const pop = sliderRef.current;
+			pop.style.position = "fixed";
+			// compute horizontal center anchored to button, then clamp so popover stays inside viewport
+			const popW = pop.offsetWidth || 200;
+			const desiredCenter = Math.round(r.left + r.width / 2);
+			const minCenter = Math.round(popW / 2) + 8;
+			const maxCenter = Math.round(window.innerWidth - popW / 2) - 8;
+			const clampedCenter = Math.max(
+				minCenter,
+				Math.min(maxCenter, desiredCenter)
+			);
+			pop.style.left = `${clampedCenter}px`;
+			pop.style.transform = "translate(-50%, 0)";
+
+			// position below if space, otherwise above; ensure top is clamped into viewport
+			let top = Math.round(r.bottom + 8);
+			if (top + pop.offsetHeight > window.innerHeight - 8) {
+				// try above
+				top = Math.round(r.top - pop.offsetHeight - 8);
+			}
+			// final clamp
+			top = Math.max(
+				8,
+				Math.min(top, Math.max(8, window.innerHeight - pop.offsetHeight - 8))
+			);
+			pop.style.top = `${top}px`;
+			// make visible after positioning
+			pop.style.opacity = "1";
+		};
+
+		const tick = () => {
+			update();
+			raf = requestAnimationFrame(tick);
+		};
+
+		window.addEventListener("resize", update);
+		window.addEventListener("scroll", update, true);
+		tick();
+
+		return () => {
+			cancelAnimationFrame(raf);
+			window.removeEventListener("resize", update);
+			window.removeEventListener("scroll", update, true);
+		};
+	}, [sliderOpenFor]);
+
 	// map of name (trimmed) -> include boolean. If true (or missing) name is included on wheel.
 	const [includeMap, setIncludeMap] = useState<Record<string, boolean>>({});
 

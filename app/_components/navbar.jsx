@@ -372,6 +372,7 @@ const Navbar = ({
 	const menubarItems = useMemo(
 		() => (
 			<Menubar
+				modal={false}
 				className={`${masque.className} tracking-wide text-[#404040] bg-transparent border-0 shadow-none md:flex-row flex-col items-stretch h-auto space-y-2 md:space-y-0`}
 			>
 				<MenubarMenu>
@@ -391,23 +392,6 @@ const Navbar = ({
 								</MenubarRadioItem>
 							))}
 						</MenubarRadioGroup>
-						{/* <RadioGroup
-							value={String(timerValue)}
-							onValueChange={(val) => handleTimerChange(Number(val))}
-							className="p-1"
-						>
-							{timerOptions.map((seconds) => (
-								<div key={seconds} className="flex items-center gap-2">
-									<RadioGroupItem
-										value={String(seconds)}
-										id={`timer-${seconds}`}
-									/>
-									<Label htmlFor={`timer-${seconds}`}>
-										{seconds} {seconds === 1 ? "Second" : "Seconds"}
-									</Label>
-								</div>
-							))}
-						</RadioGroup> */}
 					</MenubarContent>
 				</MenubarMenu>
 
@@ -463,18 +447,6 @@ const Navbar = ({
 							</div>
 						</MenubarLabel>
 						<MenubarSeparator />
-						{/* <MenubarRadioGroup
-							value={winningSoundValue}
-							onValueChange={handleWinningSoundChange}
-						>
-							{winningAudioFiles.map((soundFile) => (
-								<MenubarRadioItem key={soundFile} value={soundFile}>
-									{soundFile
-										.replace(/-/g, " ")
-										.replace(/\b\w/g, (c) => c.toUpperCase())}
-								</MenubarRadioItem>
-							))}
-						</MenubarRadioGroup> */}
 						<RadioGroup
 							value={winningSoundValue}
 							onValueChange={handleWinningSoundChange}
@@ -536,8 +508,8 @@ const Navbar = ({
 							<MenubarSubTrigger>
 								<ImageIcon className="h-4 w-4 mr-2" /> Images
 							</MenubarSubTrigger>
-							<MenubarSubContent className="max-w-[85%] md:w-[700px] max-h-[400px] overflow-y-auto">
-								<div className="p-3">
+							<MenubarSubContent className="max-w-[85%] relative md:w-[700px] max-h-[400px] overflow-y-auto">
+								<div className="p-3 ">
 									<div className="flex items-center justify-between w-full">
 										<p className="text-muted-foreground text-xs uppercase tracking-wide mb-3">
 											Choose background
@@ -655,7 +627,11 @@ const Navbar = ({
 					{menubarItems}
 				</section>
 				<section id="menu-mobile" className="md:hidden">
-					<DropdownMenu open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+					<DropdownMenu
+						modal={false}
+						open={mobileMenuOpen}
+						onOpenChange={setMobileMenuOpen}
+					>
 						<DropdownMenuTrigger asChild>
 							<button
 								type="button"
