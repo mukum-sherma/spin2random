@@ -1336,15 +1336,12 @@ export default function Home() {
 				audioContextRef.current = audioContext;
 
 				// Fetch and decode drum roll
-				console.log("📥 Loading drum roll...");
 				const drumResponse = await fetch("/sounds/drum/drum-roll.mp3");
 				const drumArrayBuffer = await drumResponse.arrayBuffer();
 				const drumBuffer = await audioContext.decodeAudioData(drumArrayBuffer);
 				drumBufferRef.current = drumBuffer;
-				console.log("✅ Drum roll loaded");
 
 				// Preload all winning sounds
-				console.log("📥 Loading winning sounds...");
 				const winningFiles = [
 					"cheering-crowd-whistle",
 					"fanfare-announcement",
@@ -1372,7 +1369,6 @@ export default function Home() {
 				winningBuffersRef.current = bufferMap;
 
 				// Preload all spin sounds
-				console.log("📥 Loading spin sounds...");
 				const spinSoundFiles = [
 					"alarm-beep-2",
 					"alarm-clock-beep",
@@ -1411,18 +1407,11 @@ export default function Home() {
 					})
 				);
 				spinBuffersRef.current = spinBufferMap;
-				console.log(
-					"✅ Loaded",
-					spinBufferMap.size,
-					"spin sounds:",
-					Array.from(spinBufferMap.keys())
-				);
 
 				// Set initial spin sound (default: single-spin)
 				const defaultSpinBuffer = spinBufferMap.get("single-spin");
 				if (defaultSpinBuffer) {
 					audioBufferRef.current = defaultSpinBuffer;
-					console.log("🔊 Initial wheel spin sound set to: single-spin");
 				} else {
 					console.error("❌ Failed to load default spin sound: single-spin");
 				}
@@ -1473,7 +1462,6 @@ export default function Home() {
 			const buffer = spinBuffersRef.current.get(spinSound);
 			if (buffer) {
 				audioBufferRef.current = buffer;
-				console.log("🔊 Wheel spin sound updated to:", spinSound);
 			}
 		}
 	}, [spinSound]);
@@ -1483,33 +1471,16 @@ export default function Home() {
 		if (showDialog && audioContextRef.current) {
 			const audioContext = audioContextRef.current;
 
-			console.log(
-				"🎵 Winner dialog opened, audio context state:",
-				audioContext.state
-			);
-			console.log("🥁 Drum buffer loaded:", !!drumBufferRef.current);
-			console.log("🏆 Winning sound:", winningSound);
-			console.log(
-				"📦 Winning buffer loaded:",
-				!!winningBuffersRef.current.get(winningSound)
-			);
-			console.log(
-				"📋 Available winning sounds:",
-				Array.from(winningBuffersRef.current.keys())
-			);
+			// Winner dialog opened — play audio if available
 
 			// Resume AudioContext if suspended (required on mobile)
 			if (audioContext.state === "suspended") {
-				console.log("⏯️ Resuming suspended audio context...");
-				audioContext.resume().then(() => {
-					console.log("✅ Audio context resumed, state:", audioContext.state);
-				});
+				audioContext.resume().catch(() => {});
 			}
 
 			try {
 				// Play drum roll and winning sounds softly/smoothly
 				if (drumBufferRef.current) {
-					console.log("🎵 Playing drum roll (soft)...");
 					playBufferSoftly(drumBufferRef.current, {
 						gain: 0.7,
 						cutoff: 5000,
@@ -1522,7 +1493,6 @@ export default function Home() {
 
 				const winningBuffer = winningBuffersRef.current.get(winningSound);
 				if (winningBuffer) {
-					console.log("🎵 Playing winning sound (soft):", winningSound);
 					playBufferSoftly(winningBuffer, {
 						gain: 0.8,
 						cutoff: 7000,
@@ -1635,7 +1605,6 @@ export default function Home() {
 	// Debug: trace changes to partition color maps to diagnose unexpected clears
 	useEffect(() => {
 		try {
-			console.debug("partitionColorsById CHANGED", { ...partitionColorsById });
 		} catch {}
 	}, [partitionColorsById]);
 

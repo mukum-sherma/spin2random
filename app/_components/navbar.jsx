@@ -193,7 +193,6 @@ const Navbar = ({
 					previewSourceRef.current.disconnect();
 				} catch (e) {
 					// Already stopped or disconnected
-					console.log("Preview stop/disconnect failed:", e);
 				}
 				previewSourceRef.current = null;
 			}
@@ -261,7 +260,6 @@ const Navbar = ({
 					previewSourceRef.current.disconnect();
 				} catch (e) {
 					// Already stopped or disconnected
-					console.log("Preview stop/disconnect failed:", e);
 				}
 				previewSourceRef.current = null;
 			}
