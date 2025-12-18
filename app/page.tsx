@@ -29,6 +29,7 @@ import {
 	// Percent icon not used in this file
 } from "lucide-react";
 import Image from "next/image";
+import localFont from "next/font/local";
 // Lazy-load dropdown menu UI (Radix + floating internals) on the client only
 const DropdownMenu = dynamic(
 	() => import("@/components/ui/dropdown-menu").then((mod) => mod.DropdownMenu),
@@ -50,7 +51,6 @@ const DropdownMenuContent = dynamic(
 );
 // Dynamically import the heavy client-side Navbar to keep it out of initial bundles
 const Navbar = dynamic(() => import("./_components/navbar"), { ssr: false });
-import localFont from "next/font/local";
 
 import { Lexend_Deca } from "next/font/google";
 import { Button } from "@/components/ui/button";
@@ -118,22 +118,52 @@ type BackgroundChange =
 
 export default function Home() {
 	const [names, setNames] = useState("Alice\nBob\nCharlie\nDiana\nEve");
+	const [nameOrder, setNameOrder] = useState<NameOrder>("shuffle");
 	// Whether any non-empty name text exists (used to enable/disable Reset)
 	const hasNames = names.trim() !== "";
 	const [spinning, setSpinning] = useState(false);
 	const [rotation, setRotation] = useState(0);
 	// Auto-spin the wheel slowly on first load until user manually spins.
 	const [autoSpinActive, setAutoSpinActive] = useState(true);
+	const [timerDuration, setTimerDuration] = useState(10);
 	const autoSpinRafRef = useRef<number | null>(null);
 	const autoSpinLastRef = useRef<number | null>(null);
 	const [winner, setWinner] = useState<string | null>(null);
 	const [winnerIndex, setWinnerIndex] = useState<number | null>(null);
 	const [showDialog, setShowDialog] = useState(false);
+
+	const [winningSound, setWinningSound] = useState("small-group-applause");
+	const [spinSound, setSpinSound] = useState("single-spin");
+	const [isFullscreen, setIsFullscreen] = useState(false);
+	const [wheelTitle, setWheelTitle] = useState("Enter an Awesome Title");
+	const [isEditingTitle, setIsEditingTitle] = useState(false);
+	const [tempTitle, setTempTitle] = useState("Enter an Awesome Title");
+	const canvasRef = useRef<HTMLCanvasElement>(null);
+	const wheelSectionRef = useRef<HTMLDivElement>(null);
+	// loaded image bitmap for faster drawing into the canvas (per-segment clipping)
+	const wheelImageBitmapRef = useRef<ImageBitmap | null>(null);
+
+	const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+	const [backgroundSelection, setBackgroundSelection] =
+		useState<BackgroundChange | null>(null);
+	// Track when a fullpage image is applied to the body and its computed contrast color
+	const [bodyBgIsImage, setBodyBgIsImage] = useState(false);
+	// Track when a body background color (not image) is applied so we can apply the
+	// same softened contrast/stroke/shadow styles as we do for fullpage images.
+	const [bodyBgIsColor, setBodyBgIsColor] = useState(false);
+	const [bodyContrast, setBodyContrast] = useState<string>("");
+	// softened text color (reduced contrast) applied to body and used for text color
+	const [bodyTextColor, setBodyTextColor] = useState<string>("");
+	// When the user selects an image for the wheel, we store its src here
+	const [wheelImageSrc, setWheelImageSrc] = useState<string | null>(null);
+	const [wheelTextColor, setWheelTextColor] = useState<string>("#000");
 	// Confetti: dynamically import react-confetti (no SSR)
 	const Confetti = useMemo(
 		() => dynamic(() => import("react-confetti"), { ssr: false }),
 		[]
 	);
+
+	const [showConfetti, setShowConfetti] = useState(false);
 	// Per-partition custom colors (advanced mode color picker)
 
 	// Palette popover state (which line's palette is open)
@@ -176,6 +206,14 @@ export default function Home() {
 		[]
 	);
 
+	// Slider popover state for per-partition weight control
+	const [sliderOpenFor, setSliderOpenFor] = useState<number | null>(null);
+	const sliderRef = useRef<HTMLDivElement | null>(null);
+	const sliderAnchorRef = useRef<HTMLElement | null>(null);
+
+	// Text input for weight popover (string so user can type freely)
+	const [sliderWeightText, setSliderWeightText] = useState<string>("");
+
 	const openPaletteFor = useCallback((idx: number, anchor?: HTMLElement) => {
 		paletteAnchorRef.current = anchor ?? null;
 		setPaletteOpenFor(idx);
@@ -185,28 +223,6 @@ export default function Home() {
 		setPaletteOpenFor(null);
 		paletteAnchorRef.current = null;
 	}, []);
-
-	const handlePaletteSelect = useCallback(
-		(idx: number, color: string) => {
-			const id = lineIdsRef.current?.[idx];
-			if (id) {
-				setPartitionColorsById((prev) => ({ ...prev, [id]: color }));
-				// Also remove any legacy index-keyed color for this index
-				setPartitionColors((prev) => {
-					const copy = { ...prev };
-					delete copy[idx];
-					return copy;
-				});
-			} else {
-				setPartitionColors((prev) => ({ ...prev, [idx]: color }));
-			}
-			drawWheelRef.current?.();
-			closePalette();
-		},
-		[closePalette]
-	);
-
-	// palette reset handler removed (unused)
 
 	// Close on outside click or Escape
 	useEffect(() => {
@@ -289,116 +305,6 @@ export default function Home() {
 		};
 	}, [paletteOpenFor]);
 
-	// Slider popover state for per-partition weight control
-	const [sliderOpenFor, setSliderOpenFor] = useState<number | null>(null);
-	const sliderRef = useRef<HTMLDivElement | null>(null);
-	const sliderAnchorRef = useRef<HTMLElement | null>(null);
-
-	// Text input for weight popover (string so user can type freely)
-	const [sliderWeightText, setSliderWeightText] = useState<string>("");
-
-	// Slider popover: close on outside click / Escape
-	useEffect(() => {
-		if (sliderOpenFor === null) return;
-		const onDocDown = (ev: MouseEvent) => {
-			const tgt = ev.target as Node | null;
-			if (!tgt) return;
-			if (sliderRef.current && sliderRef.current.contains(tgt)) return;
-			if (sliderAnchorRef.current && sliderAnchorRef.current.contains(tgt))
-				return;
-			setSliderOpenFor(null);
-			sliderAnchorRef.current = null;
-		};
-		const onKey = (ev: KeyboardEvent) => {
-			if (ev.key === "Escape") {
-				setSliderOpenFor(null);
-				sliderAnchorRef.current = null;
-			}
-		};
-		document.addEventListener("mousedown", onDocDown);
-		document.addEventListener("keydown", onKey);
-		return () => {
-			document.removeEventListener("mousedown", onDocDown);
-			document.removeEventListener("keydown", onKey);
-		};
-	}, [sliderOpenFor]);
-
-	// Keep the weight text input synced when a popover opens so the user sees
-	// the current numeric weight and can type freely.
-	useEffect(() => {
-		if (sliderOpenFor === null) {
-			setSliderWeightText("");
-			return;
-		}
-		const idx = sliderOpenFor as number;
-		const id = lineIdsRef.current?.[idx];
-		const current = id
-			? partitionWeightsByIdRef.current[id] ??
-			  partitionWeightsRef.current[idx] ??
-			  1
-			: partitionWeightsRef.current[idx] ?? 1;
-		setSliderWeightText(String(current));
-	}, [sliderOpenFor]);
-
-	// Reposition slider popover on scroll/resize when open
-	useEffect(() => {
-		if (sliderOpenFor === null) return;
-		let raf = 0;
-		const update = () => {
-			if (!sliderAnchorRef.current || !sliderRef.current) return;
-			const r = sliderAnchorRef.current.getBoundingClientRect();
-			const pop = sliderRef.current;
-			pop.style.position = "fixed";
-			const popW = pop.offsetWidth || 240;
-			const desiredCenter = Math.round(r.left + r.width / 2);
-			const minCenter = Math.round(popW / 2) + 8;
-			const maxCenter = Math.round(window.innerWidth - popW / 2) - 8;
-			const clampedCenter = Math.max(
-				minCenter,
-				Math.min(maxCenter, desiredCenter)
-			);
-			pop.style.left = `${clampedCenter}px`;
-			pop.style.transform = "translate(-50%, 0)";
-			let top = Math.round(r.bottom + 8);
-			if (top + pop.offsetHeight > window.innerHeight - 8)
-				top = Math.round(r.top - pop.offsetHeight - 8);
-			top = Math.max(
-				8,
-				Math.min(top, Math.max(8, window.innerHeight - pop.offsetHeight - 8))
-			);
-			pop.style.top = `${top}px`;
-			pop.style.opacity = "1";
-		};
-		const tick = () => {
-			update();
-			raf = requestAnimationFrame(tick);
-		};
-		window.addEventListener("resize", update);
-		window.addEventListener("scroll", update, true);
-		tick();
-		return () => {
-			cancelAnimationFrame(raf);
-			window.removeEventListener("resize", update);
-			window.removeEventListener("scroll", update, true);
-		};
-	}, [sliderOpenFor]);
-	const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
-	const [showConfetti, setShowConfetti] = useState(false);
-	const [nameOrder, setNameOrder] = useState<NameOrder>("shuffle");
-	const [timerDuration, setTimerDuration] = useState(10);
-	const [backgroundSelection, setBackgroundSelection] =
-		useState<BackgroundChange | null>(null);
-	// Track when a fullpage image is applied to the body and its computed contrast color
-	const [bodyBgIsImage, setBodyBgIsImage] = useState(false);
-	// Track when a body background color (not image) is applied so we can apply the
-	// same softened contrast/stroke/shadow styles as we do for fullpage images.
-	const [bodyBgIsColor, setBodyBgIsColor] = useState(false);
-	const [bodyContrast, setBodyContrast] = useState<string>("");
-	// softened text color (reduced contrast) applied to body and used for text color
-	const [bodyTextColor, setBodyTextColor] = useState<string>("");
-	// When the user selects an image for the wheel, we store its src here
-	const [wheelImageSrc, setWheelImageSrc] = useState<string | null>(null);
-	const [wheelTextColor, setWheelTextColor] = useState<string>("#000");
 	// map of name (trimmed) -> include boolean. If true (or missing) name is included on wheel.
 	const [includeMap, setIncludeMap] = useState<Record<string, boolean>>({});
 
@@ -419,15 +325,13 @@ export default function Home() {
 	// Compute a simple contrast color (black or white) from an ImageBitmap by
 	// sampling pixels and computing average luminance.
 	const computeContrastFromBitmap = (bmp: ImageBitmap) => {
-		// If running on the server (no DOM), return a safe default
-		if (typeof document === "undefined") return "#000000";
 		try {
 			const sampleSize = 64; // draw into a small canvas for speed
 			const off = document.createElement("canvas");
 			off.width = sampleSize;
 			off.height = sampleSize;
 			const ctx = off.getContext("2d");
-			if (!ctx) return "#000"; // Ensure context is available
+			if (!ctx) return "#000";
 			// draw the bitmap scaled to sampleSize
 			ctx.drawImage(bmp, 0, 0, sampleSize, sampleSize);
 			const data = ctx.getImageData(0, 0, sampleSize, sampleSize).data;
@@ -453,37 +357,6 @@ export default function Home() {
 
 	// Compute contrast (black or white) from a CSS color string (hex or rgb).
 	const computeContrastFromColor = (color: string) => {
-		// If we are running on the server, avoid DOM operations and fall back
-		// to a safe default. This prevents SSR/build-time errors (Vercel).
-		if (typeof document === "undefined") {
-			// Attempt a simple parse for hex/rgb; otherwise default to black.
-			const s = (color || "").trim().toLowerCase();
-			if (s.startsWith("#")) {
-				let hex = s.slice(1);
-				if (hex.length === 3)
-					hex = hex
-						.split("")
-						.map((c) => c + c)
-						.join("");
-				if (hex.length === 6) {
-					const r = parseInt(hex.slice(0, 2), 16);
-					const g = parseInt(hex.slice(2, 4), 16);
-					const b = parseInt(hex.slice(4, 6), 16);
-					const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-					return lum < 128 ? "#ffffff" : "#000000";
-				}
-				return "#000000";
-			}
-			if (s.startsWith("rgb(") || s.startsWith("rgba(")) {
-				const nums = s.replace(/rgba?\(|\)|\s/g, "").split(",");
-				const r = parseInt(nums[0], 10) || 0;
-				const g = parseInt(nums[1], 10) || 0;
-				const b = parseInt(nums[2], 10) || 0;
-				const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-				return lum < 128 ? "#ffffff" : "#000000";
-			}
-			return "#000000";
-		}
 		try {
 			let r = 0,
 				g = 0,
@@ -563,72 +436,58 @@ export default function Home() {
 				: `0 6px 18px rgba(0,0,0,0.08)`,
 		} as React.CSSProperties;
 	}, [bodyBgIsImage, bodyContrast]);
-	const [winningSound, setWinningSound] = useState("small-group-applause");
-	const [spinSound, setSpinSound] = useState("single-spin");
-	const [isFullscreen, setIsFullscreen] = useState(false);
-	const [wheelTitle, setWheelTitle] = useState("Enter an Awesome Title");
-	const [isEditingTitle, setIsEditingTitle] = useState(false);
-	const [tempTitle, setTempTitle] = useState("Enter an Awesome Title");
-	const canvasRef = useRef<HTMLCanvasElement>(null);
-	const wheelSectionRef = useRef<HTMLDivElement>(null);
-	// loaded image bitmap for faster drawing into the canvas (per-segment clipping)
-	const wheelImageBitmapRef = useRef<ImageBitmap | null>(null);
-	const audioBufferRef = useRef<AudioBuffer | null>(null);
 
-	// Snapshot for recently removed entry to support Undo
-	const [removedSnapshot, setRemovedSnapshot] = useState<null | {
-		index: number;
-		name: string;
-		id?: string | null;
-		partitionImageIndex?: string;
-		partitionImageById?: string;
-		partitionColorIndex?: string;
-		partitionColorById?: string;
-		partitionWeightIndex?: number | undefined;
-		partitionWeightById?: number | undefined;
-		partitionImageBlobUrlIndex?: string | null;
-		partitionImageBlobUrlById?: string | null;
-	}>(null);
-	const [showUndoToast, setShowUndoToast] = useState(false);
-	const undoTimerRef = useRef<number | null>(null);
+	const handlePaletteSelect = useCallback(
+		(idx: number, color: string) => {
+			const id = lineIdsRef.current?.[idx];
+			if (id) {
+				setPartitionColorsById((prev) => ({ ...prev, [id]: color }));
+				// Also remove any legacy index-keyed color for this index
+				setPartitionColors((prev) => {
+					const copy = { ...prev } as Record<number | string, string>;
+					delete copy[idx];
+					return copy;
+				});
+			} else {
+				setPartitionColors((prev) => ({ ...prev, [idx]: color }));
+			}
+			drawWheelRef.current?.();
+			closePalette();
+		},
+		[closePalette]
+	);
+	const audioContextRef = useRef<AudioContext | null>(null);
 
-	// Play an AudioBuffer through a gentle processing chain to make sounds softer/smoother.
 	const playBufferSoftly = (
 		buffer: AudioBuffer | null,
 		options?: {
+			when?: number;
 			gain?: number;
 			cutoff?: number;
 			attack?: number;
 			release?: number;
-			when?: number;
 		}
 	) => {
-		const audioContext = audioContextRef.current;
-		if (!audioContext || !buffer) return;
 		try {
+			const audioContext = audioContextRef.current;
+			if (!audioContext || !buffer) return;
 			const now = audioContext.currentTime;
 			const when = options?.when ?? now;
 			const src = audioContext.createBufferSource();
 			src.buffer = buffer;
-			// Lowpass filter to gently soften high frequencies (default softer)
 			const lp = audioContext.createBiquadFilter();
 			lp.type = "lowpass";
-			lp.frequency.value = options?.cutoff ?? 5000; // softer default
+			lp.frequency.value = options?.cutoff ?? 5000;
 			lp.Q.value = 0.7;
-			// Small gain node with smooth envelope
 			const g = audioContext.createGain();
 			const targetGain = options?.gain ?? 0.85;
 			const attack = Math.max(0.001, options?.attack ?? 0.01);
-			const release = Math.max(0.02, options?.release ?? 0.6); // longer default release
-
+			const release = Math.max(0.02, options?.release ?? 0.6);
 			g.gain.setValueAtTime(0.0001, when);
 			g.gain.linearRampToValueAtTime(targetGain, when + attack);
-
 			src.connect(lp);
 			lp.connect(g);
 			g.connect(audioContext.destination);
-
-			// Stop after buffer duration + release to allow tail
 			src.start(when);
 			const stopAt = when + buffer.duration + release;
 			g.gain.linearRampToValueAtTime(0.0001, stopAt);
@@ -637,9 +496,8 @@ export default function Home() {
 			console.warn("playBufferSoftly failed:", err);
 		}
 	};
-	const audioContextRef = useRef<AudioContext | null>(null);
 	const lastSegmentRef = useRef<number>(-1);
-	// dynamic deceleration extension (ms) used to allow the wheel to keep slowing until speed ~ 0
+	const audioBufferRef = useRef<AudioBuffer | null>(null);
 	const decelExtensionRef = useRef<number>(0);
 	const drumBufferRef = useRef<AudioBuffer | null>(null);
 	const winningBuffersRef = useRef<Map<string, AudioBuffer>>(new Map());
@@ -945,6 +803,11 @@ export default function Home() {
 	const [resetDialogVariant, setResetDialogVariant] = useState<
 		"normal" | "advanced"
 	>("normal");
+
+	// Snapshot state for undoing a removed winner/line
+	const [showUndoToast, setShowUndoToast] = useState(false);
+	const [removedSnapshot, setRemovedSnapshot] = useState<any | null>(null);
+	const undoTimerRef = useRef<number | null>(null);
 
 	const confirmReset = () => {
 		// perform reset and close dialog
@@ -3587,6 +3450,7 @@ export default function Home() {
 						left: "50%",
 						top: "50%",
 						transform: "translate(-50%, 0)",
+						opacity: 0,
 					}}
 				>
 					<div className="grid grid-cols-5 gap-2">
