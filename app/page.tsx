@@ -4327,7 +4327,7 @@ export default function Home() {
 								</div>
 
 								<div className="flex justify-between w-full items-center px-2">
-									<DropdownMenu>
+									<DropdownMenu modal={false}>
 										<DropdownMenuTrigger asChild>
 											<button
 												type="button"
@@ -4346,7 +4346,7 @@ export default function Home() {
 											</button>
 										</DropdownMenuTrigger>
 
-										<DropdownMenuContent className="w-[360px] max-h-[320px] overflow-y-auto">
+										<DropdownMenuContent className="w-[360px] max-h-80 overflow-y-auto">
 											<div className="p-3">
 												<div className="flex items-center justify-between mb-3">
 													<p className="text-muted-foreground text-xs uppercase tracking-wide">
