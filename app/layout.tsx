@@ -22,15 +22,16 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
 	title: {
-		default: "SpinWheelQuiz — Online Random Winner Picker",
+		default:
+			"SpinWheelQuiz — Online Wheel Spinner, Prize Wheel & Random Team Generator",
 		template: "%s | SpinWheelQuiz",
 	},
 	description:
-		"Randomly choose winners with a customizable spin wheel — fast, fair and mobile-friendly, with images, sounds and timers.",
+		"Create a customizable spinner, team picker wheel, and online prize wheel for giveaways, raffles and classroom activities. Free wheel maker with images, sounds and random selection — works as wheel of names alternative and name spinner.",
 	openGraph: {
-		title: "SpinWheelQuiz — Online Spin Wheel",
+		title: "SpinWheelQuiz — Online Wheel Spinner & Prize Wheel Maker",
 		description:
-			"Randomly select winners using a customizable spin wheel — fast, fair and mobile-friendly for classrooms, events and giveaways.",
+			"Create a customizable spinner and team picker wheel for giveaways, raffle wheel online draws, gamified quiz activities, and random team generator needs — fast online wheel spinner for classrooms, Zoom games and events.",
 		url: "https://spinwheelquiz.com",
 		siteName: "SpinWheelQuiz",
 		images: [
@@ -45,9 +46,9 @@ export const metadata: Metadata = {
 	},
 	twitter: {
 		card: "summary_large_image",
-		title: "SpinWheelQuiz",
+		title: "SpinWheelQuiz — Online Wheel Spinner & Prize Wheel",
 		description:
-			"SpinWheelQuiz — randomly select winners with a customizable, shareable spin wheel for quizzes, classrooms and giveaways.",
+			"Create customizable spinner, team picker wheel, name spinner and giveaway wheel — online wheel spinner for raffles, yes or no wheel spinner, gamified quiz and spin wheel for zoom games.",
 		images: ["/banner.webp"],
 	},
 };

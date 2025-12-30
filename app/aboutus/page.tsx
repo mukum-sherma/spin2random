@@ -8,23 +8,32 @@ const adalima = localFont({
 });
 
 export const metadata: Metadata = {
-	title: "About SpinWheelQuiz — About Us",
+	title: "About SpinWheelQuiz — Online Wheel Spinner & Team Picker Wheel",
 	description:
-		"About SpinWheelQuiz — learn how our customizable online spin wheel helps with giveaways, classroom picks and live events.",
+		"Learn how SpinWheelQuiz provides a customizable spinner, online wheel spinner, team picker wheel, and wheel maker for giveaways, raffle wheel online draws, gamified quiz activities and random team generator needs.",
 	keywords: [
-		"spin wheel",
+		"customizable spinner",
+		"random team generator",
+		"gamified quiz",
+		"spin wheel for zoom games",
+		"wheel picker",
+		"online wheel spinner",
+		"yes or no wheel spinner",
+		"online prize wheel",
+		"team picker wheel",
+		"wheel of names alternative",
+		"random picker wheel",
+		"raffle wheel online",
 		"prize wheel",
-		"online spin wheel",
-		"wheel of names",
-		"raffle spinner",
+		"name spinner",
 		"giveaway wheel",
-		"random picker",
-		"classroom activity",
+		"wheel maker",
+		"online spinner",
 	],
 	openGraph: {
-		title: "About SpinWheelQuiz",
+		title: "About SpinWheelQuiz — Online Wheel Spinner & Prize Wheel Maker",
 		description:
-			"Learn about SpinWheelQuiz — a fast, mobile-friendly online spin wheel for events, classrooms and giveaways.",
+			"Discover our customizable spinner, team picker wheel, online prize wheel, and wheel maker — perfect for raffle wheel online, random team generator, gamified quiz, and spin wheel for zoom games.",
 		images: ["/images/img1.jpg"],
 	},
 };
@@ -38,15 +47,17 @@ export default function AboutUsPage() {
 					<h1
 						className={`text-2xl text-slate-600  tracking-wider mb-6 ${adalima.className}`}
 					>
-						About SpinWheelQuiz
+						About SpinWheelQuiz — Online Wheel Spinner & Customizable Spinner
 					</h1>
 
 					<div className="space-y-6 text-slate-700 leading-relaxed">
 						<p className="text-lg">
 							Welcome to <strong>SpinWheelQuiz</strong> — a playful, easy-to-use
-							web app for creating customizable spin wheels. Use it to run
-							raffles, classroom activities, team-building events, giveaways, or
-							just for fun.
+							online wheel spinner and wheel maker for creating customizable
+							spin wheels. Use it to run raffles, classroom activities,
+							team-building events, giveaways, gamified quiz games, or as a
+							random team generator and yes or no wheel spinner for quick
+							decisions.
 						</p>
 
 						<h2
@@ -56,9 +67,11 @@ export default function AboutUsPage() {
 						</h2>
 						<p>
 							We want to make spinning a prize wheel delightful and simple.
-							SpinWheelQuiz focuses on fast setup, attractive visuals, and
-							configurable behavior (sounds, timers, and winner selection) so
-							anyone can run an engaging spin experience.
+							SpinWheelQuiz is a fast online spinner and team picker wheel that
+							focuses on quick setup, attractive visuals, and configurable
+							behavior (sounds, timers, and winner selection). Use it as a wheel
+							of names alternative, name spinner, or giveaway wheel — perfect
+							for raffle wheel online events and spin wheel for zoom games.
 						</p>
 
 						<h2
@@ -67,8 +80,9 @@ export default function AboutUsPage() {
 							What We Offer
 						</h2>
 						<p>
-							SpinWheelQuiz provides a growing set of features to make event
-							spinning flexible, fair and visually engaging:
+							Our customizable spinner and online prize wheel provide a growing
+							set of features to make event spinning flexible, fair and visually
+							engaging — ideal for use as a random picker wheel or wheel picker:
 						</p>
 						<ul className="list-disc list-inside space-y-2 ml-4">
 							<li>

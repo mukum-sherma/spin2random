@@ -20,17 +20,21 @@ export default function Footer() {
 						<h3
 							className={`text-xl tracking-wide  font-medium text-slate-50 mb-4 ${adalima.className}`}
 						>
-							SpinWheelQuiz
+							SpinWheelQuiz — Online Wheel Spinner & Random Wheel Picker
 						</h3>
-						<p className="text-slate-200 font-medium mb-1">
-							Create and spin customizable wheels to randomly select winners —
-							perfect for events, classrooms, giveaways and online raffles.
+						<p className="text-slate-200 font-medium mb-3">
+							Create a customizable spinner and team picker wheel to randomly
+							select winners — perfect for events, classrooms, giveaways and
+							raffle wheel online draws.
 						</p>
 						<p className="text-sm text-slate-300 md:max-w-[90%] ">
-							Build simple, shareable wheels with custom backgrounds, images,
-							sounds, timers, and fair random winner selection — fast,
-							responsive and optimized for mobile. Use this tool for classroom
-							games, giveaways, drawings, or team activities.
+							This online wheel spinner and wheel maker lets you build shareable
+							wheels with custom backgrounds, images, sounds, timers, and fair
+							random selection. Use as a wheel of names alternative, random team
+							generator, name spinner, or giveaway wheel for classroom games,
+							spin wheel for zoom games, gamified quiz activities, yes or no
+							wheel spinner decisions, and online prize wheel drawings — fast,
+							responsive and mobile-optimized.
 						</p>
 					</div>
 
@@ -46,7 +50,7 @@ export default function Footer() {
 								href="/aboutus"
 								className="text-white hover:text-slate-200 hover:underline hover:shadow-none hover:translate-y-0 transition-colors"
 							>
-								About
+								About Us
 							</Link>
 							<Link
 								href="/contactus"
