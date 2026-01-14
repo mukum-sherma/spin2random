@@ -11,6 +11,9 @@ export const metadata: Metadata = {
 	title: "Privacy Policy",
 	description:
 		"Learn about how SpinWheelQuiz collects, uses, and protects your information.",
+	alternates: {
+		canonical: "https://spinwheelquiz.com/privacypolicy",
+	},
 };
 
 export default function PrivacyPolicyPage() {

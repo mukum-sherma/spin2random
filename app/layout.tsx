@@ -28,6 +28,9 @@ export const metadata: Metadata = {
 	},
 	description:
 		"Create a customizable spinner, team picker wheel, and online prize wheel for giveaways, raffles and classroom activities. Free wheel maker with images, sounds and random selection — works as wheel of names alternative and name spinner.",
+	alternates: {
+		canonical: "https://spinwheelquiz.com",
+	},
 	openGraph: {
 		title: "SpinWheelQuiz — Online Wheel Spinner & Prize Wheel Maker",
 		description:

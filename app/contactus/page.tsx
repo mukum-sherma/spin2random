@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Head from "next/head";
 import NavbarBanner from "../_components/navbar-banner";
 import localFont from "next/font/local";
 
@@ -71,6 +72,14 @@ export default function ContactUsPage() {
 
 	return (
 		<div>
+			<Head>
+				<title>Contact Us | SpinWheelQuiz</title>
+				<meta
+					name="description"
+					content="Get in touch with SpinWheelQuiz — contact us for support, feedback, or questions about our online wheel spinner and prize wheel maker."
+				/>
+				<link rel="canonical" href="https://spinwheelquiz.com/contactus" />
+			</Head>
 			<NavbarBanner />
 			<div className="py-12 px-4">
 				<div className="container mx-auto max-w-2xl">

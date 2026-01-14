@@ -11,6 +11,9 @@ export const metadata: Metadata = {
 	title: "About SpinWheelQuiz — Online Wheel Spinner & Team Picker Wheel",
 	description:
 		"Learn how SpinWheelQuiz provides a customizable spinner, online wheel spinner, team picker wheel, and wheel maker for giveaways, raffle wheel online draws, gamified quiz activities and random team generator needs.",
+	alternates: {
+		canonical: "https://spinwheelquiz.com/aboutus",
+	},
 	keywords: [
 		"customizable spinner",
 		"random team generator",
