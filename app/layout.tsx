@@ -30,7 +30,7 @@ export const metadata: Metadata = {
 		// template: "%s | SpinWheelQuiz",
 	},
 	description:
-		"Create a customizable spinner & team picker wheel for giveaways, raffles & classrooms. Free wheel maker — works as wheel of names alternative.",
+		"Create a customizable spinner & team picker wheel for giveaways, raffles & classrooms. Perfect for events, random selection & interactive games.",
 	// alternates: {
 	// 	canonical: "https://spinwheelquiz.com",
 	// },
