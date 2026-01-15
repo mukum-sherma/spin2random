@@ -22,15 +22,18 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
 	title: {
-		default:
-			"SpinWheelQuiz — Online Wheel Spinner, Prize Wheel & Random Team Generator",
-		template: "%s | SpinWheelQuiz",
+		// default:
+		// 	"SpinWheelQuiz — Online Wheel Spinner, Prize Wheel & Random Team Generator",
+		// template: "%s | SpinWheelQuiz",
+		default: "Spin Wheel Quiz | Wheel Spinner & Random Picker",
+		template: "%s | Spin Wheel Quiz",
+		// template: "%s | SpinWheelQuiz",
 	},
 	description:
-		"Create a customizable spinner, team picker wheel, and online prize wheel for giveaways, raffles and classroom activities. Free wheel maker with images, sounds and random selection — works as wheel of names alternative and name spinner.",
-	alternates: {
-		canonical: "https://spinwheelquiz.com",
-	},
+		"Create a customizable spinner & team picker wheel for giveaways, raffles & classrooms. Free wheel maker — works as wheel of names alternative.",
+	// alternates: {
+	// 	canonical: "https://spinwheelquiz.com",
+	// },
 	openGraph: {
 		title: "SpinWheelQuiz — Online Wheel Spinner & Prize Wheel Maker",
 		description:

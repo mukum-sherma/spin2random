@@ -10,10 +10,7 @@ const adalima = localFont({
 export const metadata: Metadata = {
 	title: "Privacy Policy",
 	description:
-		"Learn about how SpinWheelQuiz collects, uses, and protects your information.",
-	alternates: {
-		canonical: "https://spinwheelquiz.com/privacypolicy",
-	},
+		"Learn how SpinWheelQuiz collects, uses, and protects your information. Our privacy policy for online wheel spinner users.",
 };
 
 export default function PrivacyPolicyPage() {
@@ -25,7 +22,7 @@ export default function PrivacyPolicyPage() {
 					<h1
 						className={`text-2xl tracking-wide font-medium text-slate-600 mb-4 ${adalima.className}`}
 					>
-						Privacy Policy
+						SpinWheelQuiz Privacy Policy
 					</h1>
 					{/* <p className="text-slate-600 mb-8">
 					<strong>Effective Date:</strong> November 16, 2025

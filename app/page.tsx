@@ -81,10 +81,6 @@ const DialogFooter = dynamic(
 	() => import("@/components/ui/dialog").then((m) => m.DialogFooter),
 	{ ssr: false }
 );
-const DialogClose = dynamic(
-	() => import("@/components/ui/dialog").then((m) => m.DialogClose),
-	{ ssr: false }
-);
 const Checkbox = dynamic(
 	() => import("@/components/ui/checkbox").then((m) => m.Checkbox),
 	{
@@ -133,7 +129,7 @@ export default function Home() {
 	const [showDialog, setShowDialog] = useState(false);
 
 	const [winningSound, setWinningSound] = useState("small-group-applause");
-	const [spinSound, setSpinSound] = useState("single-spin");
+	const [spinSound, setSpinSound] = useState("wall-clock-tick");
 	const [isFullscreen, setIsFullscreen] = useState(false);
 	const [wheelTitle, setWheelTitle] = useState("Enter an Awesome Title");
 	const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -488,7 +484,7 @@ export default function Home() {
 				? `0 6px 18px rgba(0,0,0,0.32)`
 				: `0 6px 18px rgba(0,0,0,0.08)`,
 		} as React.CSSProperties;
-	}, [bodyBgIsImage, bodyContrast]);
+	}, [bodyBgIsImage, bodyContrast, bodyBgIsColor]);
 
 	const handlePaletteSelect = useCallback(
 		(idx: number, color: string) => {
@@ -858,9 +854,25 @@ export default function Home() {
 	>("normal");
 
 	// Snapshot state for undoing a removed winner/line
+	// TODO: Implement undo UI to use showUndoToast and handleUndoRemove
 	const [showUndoToast, setShowUndoToast] = useState(false);
-	const [removedSnapshot, setRemovedSnapshot] = useState<any | null>(null);
+	const [removedSnapshot, setRemovedSnapshot] = useState<{
+		index: number;
+		name: string;
+		id: string;
+		partitionImageIndex: string;
+		partitionImageById?: string;
+		partitionColorIndex: string;
+		partitionColorById?: string;
+		partitionWeightIndex: number;
+		partitionWeightById?: number;
+		partitionImageBlobUrlIndex: string | null;
+		partitionImageBlobUrlById: string | null;
+	} | null>(null);
 	const undoTimerRef = useRef<number | null>(null);
+
+	// Suppress unused warnings - these are for future undo feature
+	void showUndoToast;
 
 	const confirmReset = () => {
 		// perform reset and close dialog
@@ -985,6 +997,7 @@ export default function Home() {
 		}, 6000);
 	};
 
+	// TODO: Wire up handleUndoRemove to UI button/toast
 	const handleUndoRemove = () => {
 		if (!removedSnapshot) return;
 		// revert names via history undo (deleteLine pushed a new history state)
@@ -1070,6 +1083,9 @@ export default function Home() {
 			undoTimerRef.current = null;
 		}
 	};
+
+	// Suppress unused warning - for future undo feature
+	void handleUndoRemove;
 
 	// handleClearLine removed — replaced by `clearTextareaLine` / `clearLineDirect` usages
 
@@ -1423,7 +1439,6 @@ export default function Home() {
 
 				// Preload all spin sounds
 				const spinSoundFiles = [
-					"alarm-beep-2",
 					"alarm-clock-beep",
 					"bell-signal",
 					"chime-bell-ring",
@@ -1461,12 +1476,14 @@ export default function Home() {
 				);
 				spinBuffersRef.current = spinBufferMap;
 
-				// Set initial spin sound (default: single-spin)
-				const defaultSpinBuffer = spinBufferMap.get("single-spin");
+				// Set initial spin sound (default: wall-clock-tick)
+				const defaultSpinBuffer = spinBufferMap.get("wall-clock-tick");
 				if (defaultSpinBuffer) {
 					audioBufferRef.current = defaultSpinBuffer;
 				} else {
-					console.error("❌ Failed to load default spin sound: single-spin");
+					console.error(
+						"❌ Failed to load default spin sound: wall-clock-tick"
+					);
 				}
 			} catch (error) {
 				console.error("Audio initialization failed:", error);
@@ -2099,7 +2116,7 @@ export default function Home() {
 				ctx.closePath();
 				ctx.fillStyle = resolvedDefaultColor;
 				ctx.fill();
-			} catch (e) {
+			} catch {
 				// ignore fill failures
 			}
 
@@ -2690,7 +2707,7 @@ export default function Home() {
 			setWinnerIndex(winnerIndex);
 			setShowDialog(true);
 		},
-		[namesList, lineIds, partitionWeights, partitionWeightsById]
+		[namesList, lineIds]
 	);
 
 	const spinWheel = useCallback(() => {
@@ -2911,17 +2928,7 @@ export default function Home() {
 		};
 
 		animate();
-	}, [
-		spinning,
-		namesList.length,
-		rotation,
-		determineWinner,
-		timerDuration,
-		lineIds,
-		partitionWeights,
-		partitionWeightsById,
-		namesList,
-	]);
+	}, [spinning, rotation, determineWinner, timerDuration, lineIds, namesList]);
 
 	// Initial very-slow autonomous spin until user manually spins once.
 	useEffect(() => {
@@ -3277,7 +3284,7 @@ export default function Home() {
 		}
 
 		prevRenderLinesRef.current = next.slice();
-	}, [renderLines]);
+	}, [renderLines, partitionColors, partitionImages, partitionImagesById]);
 
 	// If we start with an empty list, focus the first input line automatically.
 	useEffect(() => {
@@ -4157,7 +4164,7 @@ export default function Home() {
 									id="entries"
 									role="radiogroup"
 									aria-label="Quick name ordering"
-									className="flex items-stretch gap-3 w-24 flex-wrap w-full px-2"
+									className="flex items-stretch gap-3 flex-wrap w-full px-2"
 								>
 									<button
 										type="button"
@@ -4277,7 +4284,7 @@ export default function Home() {
 														{entryImageFiles.map((img) => (
 															<div
 																key={img}
-																className="w-[120px] h-[80px] cursor-pointer rounded overflow-hidden border-2 border-muted hover:border-primary transition-colors relative bg-muted"
+																className="w-[120px] h-20 cursor-pointer rounded overflow-hidden border-2 border-muted hover:border-primary transition-colors relative bg-muted"
 																onClick={() =>
 																	handleBackgroundChange({
 																		type: "image",

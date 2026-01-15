@@ -10,10 +10,7 @@ const adalima = localFont({
 export const metadata: Metadata = {
 	title: "About SpinWheelQuiz — Online Wheel Spinner & Team Picker Wheel",
 	description:
-		"Learn how SpinWheelQuiz provides a customizable spinner, online wheel spinner, team picker wheel, and wheel maker for giveaways, raffle wheel online draws, gamified quiz activities and random team generator needs.",
-	alternates: {
-		canonical: "https://spinwheelquiz.com/aboutus",
-	},
+		"Learn how SpinWheelQuiz provides a customizable spinner, team picker wheel & online prize wheel for giveaways, raffles & gamified quiz activities.",
 	keywords: [
 		"customizable spinner",
 		"random team generator",
@@ -50,7 +47,7 @@ export default function AboutUsPage() {
 					<h1
 						className={`text-2xl text-slate-600  tracking-wider mb-6 ${adalima.className}`}
 					>
-						About SpinWheelQuiz — Online Wheel Spinner & Customizable Spinner
+						About SpinWheelQuiz
 					</h1>
 
 					<div className="space-y-6 text-slate-700 leading-relaxed">

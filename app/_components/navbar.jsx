@@ -79,7 +79,6 @@ const adalima = localFont({
 const timerOptions = Array.from({ length: 39 }, (_, index) => index + 2);
 
 const spinAudioFiles = [
-	"alarm-beep-2",
 	"alarm-clock-beep",
 	"bell-signal",
 	"chime-bell-ring",
@@ -120,7 +119,7 @@ const Navbar = ({
 	onSpinSoundChange,
 	currentTimer = 10,
 	currentWinningSound = "small-group-applause",
-	currentSpinSound = "single-spin",
+	currentSpinSound = "wall-clock-tick",
 	audioContextRef,
 	winningBuffersRef,
 	spinBuffersRef,
@@ -191,7 +190,7 @@ const Navbar = ({
 				try {
 					previewSourceRef.current.stop();
 					previewSourceRef.current.disconnect();
-				} catch (e) {
+				} catch {
 					// Already stopped or disconnected
 				}
 				previewSourceRef.current = null;
@@ -226,9 +225,8 @@ const Navbar = ({
 				}
 			}
 		},
-		[audioContextRef, winningBuffersRef]
+		[audioContextRef, winningBuffersRef, ensureAudioLoaded]
 	);
-
 	const handleWinningSoundChange = useCallback(
 		(soundName) => {
 			setWinningSoundValue(soundName);
@@ -258,7 +256,7 @@ const Navbar = ({
 				try {
 					previewSourceRef.current.stop();
 					previewSourceRef.current.disconnect();
-				} catch (e) {
+				} catch {
 					// Already stopped or disconnected
 				}
 				previewSourceRef.current = null;
@@ -293,9 +291,8 @@ const Navbar = ({
 				}
 			}
 		},
-		[audioContextRef, spinBuffersRef]
+		[audioContextRef, spinBuffersRef, ensureAudioLoaded]
 	);
-
 	const handleSpinSoundChange = useCallback(
 		(soundName) => {
 			setSpinSoundValue(soundName);
@@ -306,7 +303,7 @@ const Navbar = ({
 	);
 
 	const handleResetSpinSound = useCallback(() => {
-		const defaultSound = "single-spin";
+		const defaultSound = "wall-clock-tick";
 		setSpinSoundValue(defaultSound);
 		onSpinSoundChange?.(defaultSound);
 		previewSpinSound(defaultSound);
@@ -379,7 +376,7 @@ const Navbar = ({
 					<MenubarTrigger className="cursor-pointer hover:text-orange-700 text-[13px] transition-colors w-full md:w-auto justify-start">
 						<Timer className="mr-2 h-4 w-4" /> Timers
 					</MenubarTrigger>
-					<MenubarContent className="max-h-[320px] max-md:hidden min-w-[210px] overflow-y-auto">
+					<MenubarContent className="max-h-80 max-md:hidden min-w-[210px] overflow-y-auto">
 						<MenubarLabel>Spin duration</MenubarLabel>
 						<MenubarSeparator />
 						<MenubarRadioGroup
@@ -597,7 +594,7 @@ const Navbar = ({
 
 	return (
 		<div className="bg-orange-200/90 shadow-lg">
-			<div className="container mx-auto flex h-[64px] items-center justify-between px-4">
+			<div className="container mx-auto flex h-16 items-center justify-between px-4">
 				<section
 					id="banner"
 					className="font-bold text-lg tracking-wide text-orange-950"
@@ -619,7 +616,7 @@ const Navbar = ({
 						<span
 							className={`font-medium ${adalima.className} mt-1 text-[24px] tracking-wide text-shadow-[0_0px_1px_rgba(255,255,255,0.4)]`}
 						>
-							<h1>SpinWheelQuiz</h1>
+							<h1>spinwheelquiz.com</h1>
 						</span>
 					</Link>
 				</section>
@@ -674,7 +671,7 @@ const Navbar = ({
 											Spin duration
 										</div>
 										<div className="h-px bg-border my-1" />
-										<div className="p-1 max-h-[320px] overflow-y-auto">
+										<div className="p-1 max-h-80 overflow-y-auto">
 											{timerOptions.map((seconds) => (
 												<button
 													key={seconds}

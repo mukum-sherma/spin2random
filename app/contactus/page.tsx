@@ -76,9 +76,8 @@ export default function ContactUsPage() {
 				<title>Contact Us | SpinWheelQuiz</title>
 				<meta
 					name="description"
-					content="Get in touch with SpinWheelQuiz — contact us for support, feedback, or questions about our online wheel spinner and prize wheel maker."
+					content="Contact SpinWheelQuiz for support, feedback, or questions about our online wheel spinner and prize wheel maker. We're here to help."
 				/>
-				<link rel="canonical" href="https://spinwheelquiz.com/contactus" />
 			</Head>
 			<NavbarBanner />
 			<div className="py-12 px-4">
@@ -86,7 +85,7 @@ export default function ContactUsPage() {
 					<h1
 						className={`text-2xl text-slate-600  tracking-wide mb-4 ${adalima.className}`}
 					>
-						Contact Us
+						Contact SpinWheelQuiz
 					</h1>
 					<p className="text-slate-600 mb-8">
 						Have a question about SpinWheelQuiz, need help with a wheel, or want
