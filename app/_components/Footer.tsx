@@ -15,12 +15,12 @@ export default function Footer() {
 					{/* Brand Section */}
 					<div className="md:max-w-[60%]">
 						{/* <h3 className="text-2xl font-bold text-white mb-2">
-							SpinWheelQuiz
+						Spin2Random
 						</h3> */}
 						<h3
 							className={`text-xl tracking-wide  font-medium text-slate-50 mb-4 ${adalima.className}`}
 						>
-							SpinWheelQuiz — Online Wheel Spinner & Random Wheel Picker
+							Spin2Random — Online Wheel Spinner & Random Wheel Picker
 						</h3>
 						<p className="text-slate-200 font-medium mb-3">
 							Create a customizable spinner and team picker wheel to randomly
@@ -73,7 +73,7 @@ export default function Footer() {
 				{/* Bottom Copyright Section */}
 				<div className="pt-6 border-t border-transparent">
 					<p className="text-sm text-slate-200 md:text-center">
-						SpinWheelQuiz © {year} — All rights reserved.
+						Spin2Random © {year} — All rights reserved.
 					</p>
 				</div>
 			</div>

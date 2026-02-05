@@ -46,7 +46,7 @@ const Palette = dynamic(() => import("lucide-react/dist/esm/icons/palette"), {
 });
 const RotateCcw = dynamic(
 	() => import("lucide-react/dist/esm/icons/rotate-ccw"),
-	{ ssr: false }
+	{ ssr: false },
 );
 const Timer = dynamic(() => import("lucide-react/dist/esm/icons/timer"), {
 	ssr: false,
@@ -59,7 +59,7 @@ const Volume2 = dynamic(() => import("lucide-react/dist/esm/icons/volume-2"), {
 });
 const UploadCloud = dynamic(
 	() => import("lucide-react/dist/esm/icons/upload-cloud"),
-	{ ssr: false }
+	{ ssr: false },
 );
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -166,7 +166,7 @@ const Navbar = ({
 			setTimerValue(value);
 			onTimerChange?.(Number(value));
 		},
-		[onTimerChange]
+		[onTimerChange],
 	);
 
 	const handleColorChange = useCallback(
@@ -174,7 +174,7 @@ const Navbar = ({
 			const value = event.target.value;
 			onBackgroundChange?.({ type: "color", value });
 		},
-		[onBackgroundChange]
+		[onBackgroundChange],
 	);
 
 	const previewSound = useCallback(
@@ -225,7 +225,7 @@ const Navbar = ({
 				}
 			}
 		},
-		[audioContextRef, winningBuffersRef, ensureAudioLoaded]
+		[audioContextRef, winningBuffersRef, ensureAudioLoaded],
 	);
 	const handleWinningSoundChange = useCallback(
 		(soundName) => {
@@ -233,7 +233,7 @@ const Navbar = ({
 			onWinningSoundChange?.(soundName);
 			previewSound(soundName);
 		},
-		[onWinningSoundChange, previewSound]
+		[onWinningSoundChange, previewSound],
 	);
 
 	const handleResetWinningSound = useCallback(() => {
@@ -291,7 +291,7 @@ const Navbar = ({
 				}
 			}
 		},
-		[audioContextRef, spinBuffersRef, ensureAudioLoaded]
+		[audioContextRef, spinBuffersRef, ensureAudioLoaded],
 	);
 	const handleSpinSoundChange = useCallback(
 		(soundName) => {
@@ -299,7 +299,7 @@ const Navbar = ({
 			onSpinSoundChange?.(soundName);
 			previewSpinSound(soundName);
 		},
-		[onSpinSoundChange, previewSpinSound]
+		[onSpinSoundChange, previewSpinSound],
 	);
 
 	const handleResetSpinSound = useCallback(() => {
@@ -317,7 +317,7 @@ const Navbar = ({
 		(imagePath) => {
 			onBackgroundChange?.({ type: "image", value: imagePath });
 		},
-		[onBackgroundChange]
+		[onBackgroundChange],
 	);
 
 	// ref for programmatically opening the native color picker
@@ -352,7 +352,7 @@ const Navbar = ({
 				console.warn("Background upload failed:", err);
 			}
 		},
-		[onBackgroundChange]
+		[onBackgroundChange],
 	);
 	// timer/ref used to poll for the color input mounting so we can open picker
 	const colorPickerPollRef = useRef(null);
@@ -589,7 +589,7 @@ const Navbar = ({
 			handleResetBackground,
 			handleOpenColorPicker,
 			handleBackgroundUpload,
-		]
+		],
 	);
 
 	return (
@@ -605,7 +605,7 @@ const Navbar = ({
 					>
 						<Image
 							src="/banner.webp"
-							alt="SpinWheelQuiz Logo"
+							alt="Spin2Random Logo"
 							width={50}
 							height={50}
 							className="object-contain"
@@ -616,7 +616,7 @@ const Navbar = ({
 						<span
 							className={`font-medium ${adalima.className} mt-1 text-[24px] tracking-wide text-shadow-[0_0px_1px_rgba(255,255,255,0.4)]`}
 						>
-							<h1>spinwheelquiz.com</h1>
+							<h1>spin2random.com</h1>
 						</span>
 					</Link>
 				</section>
@@ -887,7 +887,7 @@ const Navbar = ({
 																			className="w-[100px] h-[100px] cursor-pointer rounded overflow-hidden border-2 border-muted hover:border-primary transition-colors relative bg-muted"
 																			onClick={() =>
 																				handleImageClick(
-																					`/images/fullpage/${img}`
+																					`/images/fullpage/${img}`,
 																				)
 																			}
 																		>

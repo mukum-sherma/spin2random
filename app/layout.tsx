@@ -22,39 +22,46 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
 	title: {
-		// default:
-		// 	"SpinWheelQuiz — Online Wheel Spinner, Prize Wheel & Random Team Generator",
-		// template: "%s | SpinWheelQuiz",
-		default: "Spin Wheel Quiz | Wheel Spinner & Random Picker",
-		template: "%s | Spin Wheel Quiz",
-		// template: "%s | SpinWheelQuiz",
+		default: "Spin2Random — Spin the Wheel & Pick Random Winners",
+		template: "%s | Spin2Random",
 	},
 	description:
-		"Create a customizable spinner & team picker wheel for giveaways, raffles & classrooms. Perfect for events, random selection & interactive games.",
+		"Spin2Random lets you spin a customizable wheel to randomly choose winners — fast, fair, and mobile-friendly for events, classrooms, and giveaways.",
+	keywords: [
+		"spin the wheel",
+		"pick random winners",
+		"giveaway wheel",
+		"prize wheel",
+		"online spinner",
+		"random picker",
+		"spin2random",
+		"wheel spinner",
+		"team picker",
+	],
 	// alternates: {
-	// 	canonical: "https://spinwheelquiz.com",
+	// 	canonical: "https://spin2random.com",
 	// },
 	openGraph: {
-		title: "SpinWheelQuiz — Online Wheel Spinner & Prize Wheel Maker",
+		title: "Spin2Random — Spin the Wheel & Pick Random Winners",
 		description:
-			"Create a customizable spinner and team picker wheel for giveaways, raffle wheel online draws, gamified quiz activities, and random team generator needs — fast online wheel spinner for classrooms, Zoom games and events.",
-		url: "https://spinwheelquiz.com",
-		siteName: "SpinWheelQuiz",
+			"Spin2Random lets you create shareable wheels, spin the wheel live, and randomly choose winners for giveaways, raffles, and classroom games.",
+		url: "https://spin2random.com",
+		siteName: "Spin2Random",
 		images: [
 			{
 				url: "/banner.webp",
 				width: 1200,
 				height: 630,
-				alt: "SpinWheelQuiz preview",
+				alt: "Spin2Random preview",
 			},
 		],
 		type: "website",
 	},
 	twitter: {
 		card: "summary_large_image",
-		title: "SpinWheelQuiz — Online Wheel Spinner & Prize Wheel",
+		title: "Spin2Random — Spin the Wheel & Pick Random Winners",
 		description:
-			"Create customizable spinner, team picker wheel, name spinner and giveaway wheel — online wheel spinner for raffles, yes or no wheel spinner, gamified quiz and spin wheel for zoom games.",
+			"Spin the wheel, pick winners at random, and run fair, engaging spins for any event.",
 		images: ["/banner.webp"],
 	},
 };

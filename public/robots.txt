@@ -1,5 +1,5 @@
-# robots.txt for SpinWheelQuiz
-# Site: https://www.spinwheelquiz.com
+# robots.txt for Spin2Random
+# Site: https://www.spin2random.com
 # Replace or verify this domain before deploying if different
 
 User-agent: *
@@ -13,5 +13,5 @@ Disallow: /node_modules/
 Crawl-delay: 5
 
 # Preferred sitemap location (update to your production URL)
-Sitemap: https://www.spinwheelquiz.com/sitemap.xml
-Host: https://www.spinwheelquiz.com
+Sitemap: https://www.spin2random.com/sitemap.xml
+Host: https://www.spin2random.com

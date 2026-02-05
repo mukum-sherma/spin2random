@@ -8,9 +8,17 @@ const adalima = localFont({
 });
 
 export const metadata: Metadata = {
-	title: "Privacy Policy",
+	title: "Privacy Policy | Spin2Random",
 	description:
-		"Learn how SpinWheelQuiz collects, uses, and protects your information. Our privacy policy for online wheel spinner users.",
+		"Learn how Spin2Random collects, uses, and protects your information. Our privacy policy for online wheel spinner users.",
+	keywords: [
+		"privacy policy",
+		"data protection",
+		"spin2random",
+		"online spinner privacy",
+		"children's privacy",
+		"personal data",
+	],
 };
 
 export default function PrivacyPolicyPage() {
@@ -22,7 +30,7 @@ export default function PrivacyPolicyPage() {
 					<h1
 						className={`text-2xl tracking-wide font-medium text-slate-600 mb-4 ${adalima.className}`}
 					>
-						SpinWheelQuiz Privacy Policy
+						Spin2Random Privacy Policy
 					</h1>
 					{/* <p className="text-slate-600 mb-8">
 					<strong>Effective Date:</strong> November 16, 2025
@@ -36,12 +44,12 @@ export default function PrivacyPolicyPage() {
 								1. Introduction
 							</h2>
 							<p>
-								Welcome to SpinWheelQuiz (&quot;we,&quot; &quot;our,&quot; or
+								Welcome to Spin2Random (&quot;we,&quot; &quot;our,&quot; or
 								&quot;us&quot;). We are committed to protecting your privacy and
 								ensuring you have a positive experience on our website. This
 								Privacy Policy explains how we collect, use, disclose, and
 								safeguard your information when you visit our website
-								spinwheelquiz.com.
+								spin2random.com.
 							</p>
 						</section>
 
@@ -199,14 +207,14 @@ export default function PrivacyPolicyPage() {
 								8. Children&apos;s Privacy
 							</h2>
 							<p>
-								SpinWheelQuiz is suitable for children and is designed for fun
-								and enjoyment. Children aged 3 years and up can play and
-								interact with the site — there is almost no age restriction for
-								casual play. We do not intentionally collect more personal
-								information from children than is necessary for the features of
-								the site. If you believe we have collected personal information
-								from a child in error, please contact us and we will promptly
-								investigate and take appropriate action.
+								Spin2Random is suitable for children and is designed for fun and
+								enjoyment. Children aged 3 years and up can play and interact
+								with the site — there is almost no age restriction for casual
+								play. We do not intentionally collect more personal information
+								from children than is necessary for the features of the site. If
+								you believe we have collected personal information from a child
+								in error, please contact us and we will promptly investigate and
+								take appropriate action.
 							</p>
 						</section>
 
@@ -248,10 +256,10 @@ export default function PrivacyPolicyPage() {
 								<p className="mt-2">
 									<strong>Website:</strong>{" "}
 									<a
-										href="https://spinwheelquiz.com"
+										href="https://spin2random.com"
 										className="text-blue-600 hover:underline"
 									>
-										https://spinwheelquiz.com
+										https://spin2random.com
 									</a>
 								</p>
 							</div>

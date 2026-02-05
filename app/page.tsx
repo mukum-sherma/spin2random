@@ -33,21 +33,21 @@ import localFont from "next/font/local";
 // Lazy-load dropdown menu UI (Radix + floating internals) on the client only
 const DropdownMenu = dynamic(
 	() => import("@/components/ui/dropdown-menu").then((mod) => mod.DropdownMenu),
-	{ ssr: false }
+	{ ssr: false },
 );
 const DropdownMenuTrigger = dynamic(
 	() =>
 		import("@/components/ui/dropdown-menu").then(
-			(mod) => mod.DropdownMenuTrigger
+			(mod) => mod.DropdownMenuTrigger,
 		),
-	{ ssr: false }
+	{ ssr: false },
 );
 const DropdownMenuContent = dynamic(
 	() =>
 		import("@/components/ui/dropdown-menu").then(
-			(mod) => mod.DropdownMenuContent
+			(mod) => mod.DropdownMenuContent,
 		),
-	{ ssr: false }
+	{ ssr: false },
 );
 // Dynamically import the heavy client-side Navbar to keep it out of initial bundles
 const Navbar = dynamic(() => import("./_components/navbar"), { ssr: false });
@@ -59,33 +59,33 @@ const Dialog = dynamic(
 	() => import("@/components/ui/dialog").then((m) => m.Dialog),
 	{
 		ssr: false,
-	}
+	},
 );
 const DialogContent = dynamic(
 	() => import("@/components/ui/dialog").then((m) => m.DialogContent),
-	{ ssr: false }
+	{ ssr: false },
 );
 const DialogHeader = dynamic(
 	() => import("@/components/ui/dialog").then((m) => m.DialogHeader),
-	{ ssr: false }
+	{ ssr: false },
 );
 const DialogTitle = dynamic(
 	() => import("@/components/ui/dialog").then((m) => m.DialogTitle),
-	{ ssr: false }
+	{ ssr: false },
 );
 const DialogDescription = dynamic(
 	() => import("@/components/ui/dialog").then((m) => m.DialogDescription),
-	{ ssr: false }
+	{ ssr: false },
 );
 const DialogFooter = dynamic(
 	() => import("@/components/ui/dialog").then((m) => m.DialogFooter),
-	{ ssr: false }
+	{ ssr: false },
 );
 const Checkbox = dynamic(
 	() => import("@/components/ui/checkbox").then((m) => m.Checkbox),
 	{
 		ssr: false,
-	}
+	},
 );
 // DialogOverlay import removed (unused)
 const lexendDeca = Lexend_Deca({
@@ -156,7 +156,7 @@ export default function Home() {
 	// Confetti: dynamically import react-confetti (no SSR)
 	const Confetti = useMemo(
 		() => dynamic(() => import("react-confetti"), { ssr: false }),
-		[]
+		[],
 	);
 
 	const [showConfetti, setShowConfetti] = useState(false);
@@ -199,7 +199,7 @@ export default function Home() {
 			"#F1948A",
 			"#F8B88B",
 		],
-		[]
+		[],
 	);
 
 	// Slider popover state for per-partition weight control
@@ -263,7 +263,7 @@ export default function Home() {
 			const maxCenter = Math.round(window.innerWidth - popW / 2) - 8;
 			const clampedCenter = Math.max(
 				minCenter,
-				Math.min(maxCenter, desiredCenter)
+				Math.min(maxCenter, desiredCenter),
 			);
 			pop.style.left = `${clampedCenter}px`;
 			// use translate to center horizontally
@@ -278,7 +278,7 @@ export default function Home() {
 			// final clamp
 			top = Math.max(
 				8,
-				Math.min(top, Math.max(8, window.innerHeight - pop.offsetHeight - 8))
+				Math.min(top, Math.max(8, window.innerHeight - pop.offsetHeight - 8)),
 			);
 			pop.style.top = `${top}px`;
 			// make visible after positioning
@@ -317,7 +317,7 @@ export default function Home() {
 			const maxCenter = Math.round(window.innerWidth - popW / 2) - 8;
 			const clampedCenter = Math.max(
 				minCenter,
-				Math.min(maxCenter, desiredCenter)
+				Math.min(maxCenter, desiredCenter),
 			);
 			pop.style.left = `${clampedCenter}px`;
 			pop.style.transform = "translate(-50%, 0)";
@@ -331,7 +331,7 @@ export default function Home() {
 			// final clamp
 			top = Math.max(
 				8,
-				Math.min(top, Math.max(8, window.innerHeight - pop.offsetHeight - 8))
+				Math.min(top, Math.max(8, window.innerHeight - pop.offsetHeight - 8)),
 			);
 			pop.style.top = `${top}px`;
 			// make visible after positioning
@@ -503,7 +503,7 @@ export default function Home() {
 			drawWheelRef.current?.();
 			closePalette();
 		},
-		[closePalette]
+		[closePalette],
 	);
 	const audioContextRef = useRef<AudioContext | null>(null);
 
@@ -515,7 +515,7 @@ export default function Home() {
 			cutoff?: number;
 			attack?: number;
 			release?: number;
-		}
+		},
 	) => {
 		try {
 			const audioContext = audioContextRef.current;
@@ -757,7 +757,7 @@ export default function Home() {
 							textareaRef.current.focus();
 							textareaRef.current.selectionStart = Math.min(
 								charPos,
-								textareaRef.current.value.length
+								textareaRef.current.value.length,
 							);
 							textareaRef.current.selectionEnd =
 								textareaRef.current.selectionStart;
@@ -911,7 +911,7 @@ export default function Home() {
 			partitionImageBlobUrlIndex:
 				partitionImageBlobUrlsRef.current[idx] ?? null,
 			partitionImageBlobUrlById: id
-				? partitionImageBlobUrlsByIdRef.current[id] ?? null
+				? (partitionImageBlobUrlsByIdRef.current[id] ?? null)
 				: null,
 		};
 		setRemovedSnapshot(snapshot);
@@ -940,7 +940,7 @@ export default function Home() {
 		// Remove index-keyed maps (shift indices down)
 		const removeIndexKeyed = <T,>(
 			obj: Record<number, T>,
-			removeIdx: number
+			removeIdx: number,
 		) => {
 			const out: Record<number, T> = {};
 			Object.keys(obj).forEach((k) => {
@@ -1030,7 +1030,7 @@ export default function Home() {
 		const insertIndexKeyed = <T,>(
 			obj: Record<number, T>,
 			insertIdx: number,
-			val?: T
+			val?: T,
 		) => {
 			const out: Record<number, T> = {};
 			Object.keys(obj).forEach((k) => {
@@ -1045,17 +1045,17 @@ export default function Home() {
 
 		if (s.partitionImageIndex) {
 			setPartitionImages((prev) =>
-				insertIndexKeyed(prev, s.index, s.partitionImageIndex)
+				insertIndexKeyed(prev, s.index, s.partitionImageIndex),
 			);
 		}
 		if (typeof s.partitionColorIndex !== "undefined") {
 			setPartitionColors((prev) =>
-				insertIndexKeyed<string>(prev, s.index, s.partitionColorIndex)
+				insertIndexKeyed<string>(prev, s.index, s.partitionColorIndex),
 			);
 		}
 		if (typeof s.partitionWeightIndex !== "undefined") {
 			setPartitionWeights((prev) =>
-				insertIndexKeyed<number>(prev, s.index, s.partitionWeightIndex)
+				insertIndexKeyed<number>(prev, s.index, s.partitionWeightIndex),
 			);
 		}
 
@@ -1233,7 +1233,7 @@ export default function Home() {
 
 	const handleKeyDownInsert = (
 		e: React.KeyboardEvent<HTMLInputElement>,
-		index: number
+		index: number,
 	) => {
 		if (e.key === "Enter" && !e.shiftKey) {
 			e.preventDefault();
@@ -1433,7 +1433,7 @@ export default function Home() {
 						} catch (err) {
 							console.warn(`Failed to load ${fileName}:`, err);
 						}
-					})
+					}),
 				);
 				winningBuffersRef.current = bufferMap;
 
@@ -1472,7 +1472,7 @@ export default function Home() {
 						} catch (err) {
 							console.warn(`Failed to load spin sound ${fileName}:`, err);
 						}
-					})
+					}),
 				);
 				spinBuffersRef.current = spinBufferMap;
 
@@ -1482,7 +1482,7 @@ export default function Home() {
 					audioBufferRef.current = defaultSpinBuffer;
 				} else {
 					console.error(
-						"❌ Failed to load default spin sound: wall-clock-tick"
+						"❌ Failed to load default spin sound: wall-clock-tick",
 					);
 				}
 			} catch (error) {
@@ -1642,7 +1642,7 @@ export default function Home() {
 				return next;
 			});
 		},
-		[reorderNames]
+		[reorderNames],
 	);
 
 	const handleTimerChange = useCallback((seconds: number) => {
@@ -1663,7 +1663,7 @@ export default function Home() {
 	>({});
 	// Legacy index-keyed images remain for fallback, but introduce id-keyed maps
 	const partitionImageBitmapRefs = useRef<Record<number, ImageBitmap | null>>(
-		{}
+		{},
 	);
 	const [partitionImagesById, setPartitionImagesById] = useState<
 		Record<string, string>
@@ -1704,7 +1704,7 @@ export default function Home() {
 		Record<string, ImageBitmap | null>
 	>({});
 	const partitionImageBlobUrlsByIdRef = useRef<Record<string, string | null>>(
-		{}
+		{},
 	);
 	const partitionImageContrastByIdRef = useRef<Record<string, string>>({});
 	// Cache simple contrast ("#ffffff" or "#000000") per-partition image to
@@ -1721,7 +1721,7 @@ export default function Home() {
 	const pendingPartitionIndexForFileRef = useRef<number | null>(null);
 
 	const onEntryFileSelected = async (
-		e: React.ChangeEvent<HTMLInputElement>
+		e: React.ChangeEvent<HTMLInputElement>,
 	) => {
 		const f = e.target.files?.[0];
 		if (!f) return;
@@ -2008,7 +2008,7 @@ export default function Home() {
 			"#F8B88B",
 			"#ABEBC6",
 		],
-		[]
+		[],
 	);
 
 	// Per-partition custom colors (advanced mode color picker)
@@ -2037,7 +2037,7 @@ export default function Home() {
 			namesList.length > 0
 				? namesList
 				: //  : ["Add", "Names", "Here", "To", "Start", "Spinning"];
-				  [""];
+					[""];
 
 		if (!canvas) return;
 
@@ -2061,14 +2061,15 @@ export default function Home() {
 		const weights = displayList.map((_, i) => {
 			const id = lineIds[i];
 			const w = id
-				? partitionWeightsByIdRef.current[id] ?? partitionWeightsRef.current[i]
+				? (partitionWeightsByIdRef.current[id] ??
+					partitionWeightsRef.current[i])
 				: partitionWeightsRef.current[i];
 			return Number(w ?? 1);
 		});
 
 		const totalWeight = Math.max(
 			1,
-			weights.reduce((a, b) => a + b, 0)
+			weights.reduce((a, b) => a + b, 0),
 		);
 
 		// Accumulator angle starts at the global rotation
@@ -2141,7 +2142,7 @@ export default function Home() {
 						} catch (e) {
 							console.warn(
 								"Failed to draw wheel image into partition sector:",
-								e
+								e,
 							);
 						}
 					}
@@ -2281,7 +2282,7 @@ export default function Home() {
 				} else {
 					try {
 						const c = computeContrastFromBitmap(
-							partitionImageBitmapByIdRef.current[id] as ImageBitmap
+							partitionImageBitmapByIdRef.current[id] as ImageBitmap,
 						);
 						contrastColor = c || contrastColor;
 						partitionImageContrastByIdRef.current[id] = contrastColor;
@@ -2294,7 +2295,7 @@ export default function Home() {
 				} else {
 					try {
 						const c = computeContrastFromBitmap(
-							partitionImageBitmapRefs.current[index] as ImageBitmap
+							partitionImageBitmapRefs.current[index] as ImageBitmap,
 						);
 						contrastColor = c || contrastColor;
 						partitionImageContrastRef.current[index] = contrastColor;
@@ -2332,7 +2333,7 @@ export default function Home() {
 			const minScale = displayList.length >= 8 ? 1.8 : 0.9;
 			const partitionScale = Math.min(
 				2.5,
-				Math.max(minScale, angleDegrees / 30)
+				Math.max(minScale, angleDegrees / 30),
 			);
 			let fontSize = Math.round(baseFontSize * partitionScale);
 			ctx.font = `bold ${fontSize}px Arial`;
@@ -2410,7 +2411,7 @@ export default function Home() {
 			radius * 0.5,
 			centerX,
 			centerY,
-			radius
+			radius,
 		);
 		gradient.addColorStop(0, "rgba(255, 255, 255, 0)");
 		gradient.addColorStop(0.85, "rgba(255, 255, 255, 0)");
@@ -2478,7 +2479,7 @@ export default function Home() {
 			0,
 			centerX,
 			centerY,
-			circleRadius
+			circleRadius,
 		);
 
 		if (spinning) {
@@ -2509,7 +2510,7 @@ export default function Home() {
 				0,
 				centerX,
 				centerY,
-				circleRadius - 3
+				circleRadius - 3,
 			);
 			innerShadow.addColorStop(0, "rgba(0,0,0,0)");
 			innerShadow.addColorStop(0.8, "rgba(0,0,0,0)");
@@ -2526,7 +2527,7 @@ export default function Home() {
 				0,
 				centerX,
 				centerY,
-				circleRadius * 0.6
+				circleRadius * 0.6,
 			);
 			highlight.addColorStop(0, "rgba(255,255,255,0.15)");
 			highlight.addColorStop(1, "rgba(255,255,255,0)");
@@ -2630,7 +2631,7 @@ export default function Home() {
 					const currentIdx = (lineIdsRef.current ?? []).indexOf(id);
 					const currentSrc =
 						currentIdx >= 0
-							? partitionImagesById[id] ?? partitionImages[currentIdx]
+							? (partitionImagesById[id] ?? partitionImages[currentIdx])
 							: partitionImagesById[id];
 					if (currentSrc !== src) continue;
 					const res = await fetch(src);
@@ -2640,7 +2641,7 @@ export default function Home() {
 					// Another guard: ensure the src hasn't changed while we fetched/decoded
 					const stillSrc =
 						currentIdx >= 0
-							? partitionImagesById[id] ?? partitionImages[currentIdx]
+							? (partitionImagesById[id] ?? partitionImages[currentIdx])
 							: partitionImagesById[id];
 					if (stillSrc !== src) {
 						try {
@@ -2678,14 +2679,14 @@ export default function Home() {
 			const weights = namesList.map((_, i) => {
 				const id = lineIds[i];
 				const w = id
-					? partitionWeightsByIdRef.current[id] ??
-					  partitionWeightsRef.current[i]
+					? (partitionWeightsByIdRef.current[id] ??
+						partitionWeightsRef.current[i])
 					: partitionWeightsRef.current[i];
 				return Number(w ?? 1);
 			});
 			const totalWeight = Math.max(
 				1,
-				weights.reduce((a, b) => a + b, 0)
+				weights.reduce((a, b) => a + b, 0),
 			);
 
 			// The arrow points to the right (0 degrees). Convert finalRotation
@@ -2707,7 +2708,7 @@ export default function Home() {
 			setWinnerIndex(winnerIndex);
 			setShowDialog(true);
 		},
-		[namesList, lineIds]
+		[namesList, lineIds],
 	);
 
 	const spinWheel = useCallback(() => {
@@ -2852,14 +2853,14 @@ export default function Home() {
 			const weightsForDetect = namesList.map((_, i) => {
 				const id = lineIds[i];
 				const w = id
-					? partitionWeightsByIdRef.current[id] ??
-					  partitionWeightsRef.current[i]
+					? (partitionWeightsByIdRef.current[id] ??
+						partitionWeightsRef.current[i])
 					: partitionWeightsRef.current[i];
 				return Number(w ?? 1);
 			});
 			const totalWForDetect = Math.max(
 				1,
-				weightsForDetect.reduce((a, b) => a + b, 0)
+				weightsForDetect.reduce((a, b) => a + b, 0),
 			);
 			let accForDetect = 0;
 			let currentSegment = 0;
@@ -3157,7 +3158,7 @@ export default function Home() {
 		// Queue orphaned blob urls for deferred revocation
 		try {
 			const prevUrls = Object.values(partitionImageBlobUrlsRef.current).filter(
-				Boolean
+				Boolean,
 			) as string[];
 			const newUrls = Object.values(newBlobMap).filter(Boolean) as string[];
 			for (const u of prevUrls) {
@@ -3170,13 +3171,13 @@ export default function Home() {
 			setTimeout(() => {
 				try {
 					const currentUrls = Object.values(
-						partitionImageBlobUrlsRef.current
+						partitionImageBlobUrlsRef.current,
 					).filter(Boolean) as string[];
 					const activeImagesIndex = Object.values(partitionImages).filter(
-						Boolean
+						Boolean,
 					) as string[];
 					const activeImagesById = Object.values(partitionImagesById).filter(
-						Boolean
+						Boolean,
 					) as string[];
 					const activeImages = [...activeImagesIndex, ...activeImagesById];
 					for (const u of Array.from(pendingBlobRevocationsRef.current)) {
@@ -3357,14 +3358,14 @@ export default function Home() {
 	const getWeightForIndex = (i: number) => {
 		const id = lineIds[i];
 		const w = id
-			? partitionWeightsByIdRef.current[id] ?? partitionWeightsRef.current[i]
+			? (partitionWeightsByIdRef.current[id] ?? partitionWeightsRef.current[i])
 			: partitionWeightsRef.current[i];
 		return Number(w ?? 1);
 	};
 
 	const totalWeightForRender = Math.max(
 		1,
-		renderLines.reduce((acc, _ln, i) => acc + getWeightForIndex(i), 0)
+		renderLines.reduce((acc, _ln, i) => acc + getWeightForIndex(i), 0),
 	);
 
 	return (
@@ -3685,8 +3686,8 @@ export default function Home() {
 								isFullscreen
 									? "w-full flex justify-center items-center flex-col"
 									: hideNames
-									? "md:w-[95%] lg:w-[85%] xl:w-[75%] 2xl:w-[60%]"
-									: `w-full md:flex-1`
+										? "md:w-[95%] lg:w-[85%] xl:w-[75%] 2xl:w-[60%]"
+										: `w-full md:flex-1`
 							} relative`}
 						>
 							{/* Title and Fullscreen Header */}
@@ -3875,7 +3876,7 @@ export default function Home() {
 													if (idx == null) return null;
 													const id = lineIdsRef.current?.[idx];
 													const src = id
-														? partitionImagesById[id] ?? partitionImages[idx]
+														? (partitionImagesById[id] ?? partitionImages[idx])
 														: partitionImages[idx];
 													if (!src) return null;
 													return (
@@ -3932,18 +3933,18 @@ export default function Home() {
 										const idx = sliderOpenFor as number;
 										const id = lineIdsRef.current?.[idx];
 										const current = id
-											? partitionWeightsByIdRef.current[id] ??
-											  partitionWeightsRef.current[idx] ??
-											  1
-											: partitionWeightsRef.current[idx] ?? 1;
+											? (partitionWeightsByIdRef.current[id] ??
+												partitionWeightsRef.current[idx] ??
+												1)
+											: (partitionWeightsRef.current[idx] ?? 1);
 										return (
 											<div className="w-[260px] rounded-md">
 												{(() => {
 													const pct =
 														totalWeightForRender > 0
 															? Math.round(
-																	(current / totalWeightForRender) * 100
-															  )
+																	(current / totalWeightForRender) * 100,
+																)
 															: 0;
 													return (
 														<div className="text-sm font-medium mb-2 flex items-center justify-between">
@@ -3961,7 +3962,7 @@ export default function Home() {
 													value={current}
 													onChange={(e) => {
 														const val = Number(
-															(e.target as HTMLInputElement).value || 0
+															(e.target as HTMLInputElement).value || 0,
 														);
 														if (id) {
 															// update refs synchronously so draw uses latest value
@@ -4017,7 +4018,7 @@ export default function Home() {
 																if (isNaN(val)) val = 0;
 																val = Math.max(
 																	0,
-																	Math.min(200, Math.round(val))
+																	Math.min(200, Math.round(val)),
 																);
 																if (id) {
 																	partitionWeightsByIdRef.current = {
@@ -4054,7 +4055,7 @@ export default function Home() {
 																if (isNaN(val)) val = 0;
 																val = Math.max(
 																	0,
-																	Math.min(200, Math.round(val))
+																	Math.min(200, Math.round(val)),
 																);
 																if (id) {
 																	partitionWeightsByIdRef.current = {
@@ -4386,14 +4387,14 @@ export default function Home() {
 															textareaSize.width ||
 															0) -
 															paddingLeft -
-															(ICON_DIV_WIDTH + 16)
+															(ICON_DIV_WIDTH + 16),
 													);
 													const strikeWidth = Math.max(
 														12,
 														Math.min(
 															textWidth,
-															maxStrikeWidth > 0 ? maxStrikeWidth : textWidth
-														)
+															maxStrikeWidth > 0 ? maxStrikeWidth : textWidth,
+														),
 													);
 													return (
 														<div
@@ -4452,7 +4453,7 @@ export default function Home() {
 																	}
 																	checked={isIncluded}
 																	onCheckedChange={(
-																		v: boolean | "indeterminate"
+																		v: boolean | "indeterminate",
 																	) => handleToggleInclude(idx, !!v)}
 																	className="min-h-6 min-w-6 border border-gray-300 shadow-sm p-1 data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-500 data-[state=checked]:text-white dark:data-[state=checked]:border-blue-700 dark:data-[state=checked]:bg-blue-500"
 																/>
@@ -4552,16 +4553,16 @@ export default function Home() {
 													// Palette button color: prefer id-keyed per-partition override
 													const pid = lineIdsRef.current?.[idx];
 													const paletteBtnColor = pid
-														? partitionColorsById[pid] ??
-														  partitionColors[idx] ??
-														  colors[idx % colors.length]
-														: partitionColors[idx] ??
-														  colors[idx % colors.length];
+														? (partitionColorsById[pid] ??
+															partitionColors[idx] ??
+															colors[idx % colors.length])
+														: (partitionColors[idx] ??
+															colors[idx % colors.length]);
 													const paletteBtnTextColor =
 														computeContrastFromColor(paletteBtnColor);
 													const weight = getWeightForIndex(idx);
 													const percent = Math.round(
-														(weight / totalWeightForRender) * 100
+														(weight / totalWeightForRender) * 100,
 													);
 													return (
 														<div
@@ -4653,7 +4654,7 @@ export default function Home() {
 																		}
 																		checked={isIncluded}
 																		onCheckedChange={(
-																			v: boolean | "indeterminate"
+																			v: boolean | "indeterminate",
 																		) => handleToggleInclude(idx, !!v)}
 																		className="min-h-6 min-w-6 border border-gray-300 shadow-sm p-1 data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-500 data-[state=checked]:text-white dark:data-[state=checked]:border-blue-700 dark:data-[state=checked]:bg-blue-500"
 																	/>
@@ -4711,7 +4712,7 @@ export default function Home() {
 																				if (e.dataTransfer) {
 																					e.dataTransfer.setData(
 																						"text/plain",
-																						String(idx)
+																						String(idx),
 																					);
 																					e.dataTransfer.effectAllowed = "move";
 																				}
@@ -4741,7 +4742,7 @@ export default function Home() {
 																			e.stopPropagation();
 																			openPaletteFor(
 																				idx,
-																				e.currentTarget as HTMLElement
+																				e.currentTarget as HTMLElement,
 																			);
 																		}}
 																		aria-label={`Open palette for ${(
@@ -4772,8 +4773,8 @@ export default function Home() {
 																			{(() => {
 																				const id = lineIdsRef.current?.[idx];
 																				const src = id
-																					? partitionImagesById[id] ??
-																					  partitionImages[idx]
+																					? (partitionImagesById[id] ??
+																						partitionImages[idx])
 																					: partitionImages[idx];
 																				if (src) {
 																					return (
@@ -4799,8 +4800,8 @@ export default function Home() {
 																		{(() => {
 																			const id2 = lineIdsRef.current?.[idx];
 																			const src2 = id2
-																				? partitionImagesById[id2] ??
-																				  partitionImages[idx]
+																				? (partitionImagesById[id2] ??
+																					partitionImages[idx])
 																				: partitionImages[idx];
 																			if (!src2) return null;
 																			return (
@@ -5044,7 +5045,7 @@ export default function Home() {
 											if (idx == null) return null;
 											const id = lineIdsRef.current?.[idx];
 											const src = id
-												? partitionImagesById[id] ?? partitionImages[idx]
+												? (partitionImagesById[id] ?? partitionImages[idx])
 												: partitionImages[idx];
 											if (!src) return null;
 											return (
@@ -5109,10 +5110,10 @@ export default function Home() {
 					<h3
 						className={`text-xl tracking-wide  font-medium text-slate-600 mb-4 ${adalima.className}`}
 					>
-						Why use SpinWheelQuiz ?
+						Why use Spin2Random ?
 					</h3>
 					<p className="text-slate-700 leading-relaxed mb-6">
-						SpinWheelQuiz is an online spin wheel generator optimized for fast
+						Spin2Random is an online spin wheel generator optimized for fast
 						setup, mobile devices and live events. Customize backgrounds, sounds
 						and timers, manage entries quickly and run fair, transparent spins
 						with a polished presentation that keeps audiences engaged.

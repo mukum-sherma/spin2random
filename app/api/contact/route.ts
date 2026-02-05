@@ -127,10 +127,7 @@ export async function POST(request: Request) {
 		const mailOptions = {
 			from: `${name} <${FROM_ADDRESS}>`,
 			to: "sherma.mukum@gmail.com",
-			subject: `SpinWheelQuiz.com Contact Form Submission`,
-			text: `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
-			replyTo: email,
-		} as const;
+		subject: `Spin2Random.com Contact Form Submission`,
 
 		await transporter.sendMail(mailOptions);
 

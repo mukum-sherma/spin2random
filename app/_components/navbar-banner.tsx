@@ -18,7 +18,7 @@ const NavbarBanner = () => {
 					>
 						<Image
 							src="/banner.webp"
-							alt="SpinWheelQuiz Logo"
+							alt="Spin2Random Logo"
 							width={50}
 							height={50}
 							className="object-contain"
@@ -27,8 +27,8 @@ const NavbarBanner = () => {
 						<span
 							className={`font-medium ${adalima.className} mt-1 text-[24px] tracking-wide text-shadow-[0_0px_1px_rgba(255,255,255,0.4)]`}
 						>
-							{/* SpinWheelQuiz */}
-							spinwheelquiz.com
+							{/* Spin2Random */}
+							spin2random.com
 						</span>
 					</Link>
 				</section>

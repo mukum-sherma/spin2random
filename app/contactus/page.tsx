@@ -44,7 +44,7 @@ export default function ContactUsPage() {
 
 			if (!res.ok)
 				throw new Error(
-					data.error || data.message || `Server error ${res.status}`
+					data.error || data.message || `Server error ${res.status}`,
 				);
 
 			setSubmitStatus({
@@ -65,7 +65,7 @@ export default function ContactUsPage() {
 	};
 
 	const handleChange = (
-		e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+		e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
 	) => {
 		setFormData({ ...formData, [e.target.name]: e.target.value });
 	};
@@ -73,10 +73,14 @@ export default function ContactUsPage() {
 	return (
 		<div>
 			<Head>
-				<title>Contact Us | SpinWheelQuiz</title>
+				<title>Contact Us | Spin2Random</title>
 				<meta
 					name="description"
-					content="Contact SpinWheelQuiz for support, feedback, or questions about our online wheel spinner and prize wheel maker. We're here to help."
+					content="Contact Spin2Random for support, feedback, or questions about spinning the wheel and randomly choosing winners. We're here to help."
+				/>
+				<meta
+					name="keywords"
+					content="contact, spin2random, support, spin the wheel, pick random winners, giveaway help"
 				/>
 			</Head>
 			<NavbarBanner />
@@ -85,10 +89,10 @@ export default function ContactUsPage() {
 					<h1
 						className={`text-2xl text-slate-600  tracking-wide mb-4 ${adalima.className}`}
 					>
-						Contact SpinWheelQuiz
+						Contact Spin2Random
 					</h1>
 					<p className="text-slate-600 mb-8">
-						Have a question about SpinWheelQuiz, need help with a wheel, or want
+						Have a question about Spin2Random, need help with a wheel, or want
 						to suggest a feature? Fill out the form below and we&apos;ll get
 						back to you as soon as possible.
 					</p>
