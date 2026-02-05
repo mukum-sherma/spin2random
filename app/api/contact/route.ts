@@ -33,7 +33,7 @@ function checkRateLimit(ip: string): { allowed: boolean; resetTime?: number } {
 
 	// Remove timestamps older than 1 hour
 	const recentSubmissions = submissions.filter(
-		(timestamp) => now - timestamp < RATE_LIMIT_WINDOW
+		(timestamp) => now - timestamp < RATE_LIMIT_WINDOW,
 	);
 
 	if (recentSubmissions.length >= RATE_LIMIT_MAX) {
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
 			const resetTime =
 				rateLimitCheck.resetTime || Date.now() + RATE_LIMIT_WINDOW;
 			const minutesUntilReset = Math.ceil(
-				(resetTime - Date.now()) / (60 * 1000)
+				(resetTime - Date.now()) / (60 * 1000),
 			);
 
 			return NextResponse.json(
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
 						minutesUntilReset !== 1 ? "s" : ""
 					}.`,
 				},
-				{ status: 429 }
+				{ status: 429 },
 			);
 		}
 
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
 		if (!name || !email || !message) {
 			return NextResponse.json(
 				{ error: "All fields are required" },
-				{ status: 400 }
+				{ status: 400 },
 			);
 		}
 
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
 		if (!emailRegex.test(email)) {
 			return NextResponse.json(
 				{ error: "Invalid email format" },
-				{ status: 400 }
+				{ status: 400 },
 			);
 		}
 
@@ -106,11 +106,11 @@ export async function POST(request: Request) {
 
 		if (!SMTP_HOST || !SMTP_PORT) {
 			console.error(
-				"SMTP configuration missing: set SMTP_HOST and SMTP_PORT in environment"
+				"SMTP configuration missing: set SMTP_HOST and SMTP_PORT in environment",
 			);
 			return NextResponse.json(
 				{ error: "Mail service not configured" },
-				{ status: 500 }
+				{ status: 500 },
 			);
 		}
 
@@ -127,7 +127,10 @@ export async function POST(request: Request) {
 		const mailOptions = {
 			from: `${name} <${FROM_ADDRESS}>`,
 			to: "sherma.mukum@gmail.com",
-		subject: `Spin2Random.com Contact Form Submission`,
+			subject: `Spin2Random.com Contact Form Submission`,
+			text: `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
+			replyTo: email,
+		} as const;
 
 		await transporter.sendMail(mailOptions);
 
@@ -136,7 +139,7 @@ export async function POST(request: Request) {
 		console.error("Contact form error:", err);
 		return NextResponse.json(
 			{ error: "Failed to send message" },
-			{ status: 500 }
+			{ status: 500 },
 		);
 	}
 }
